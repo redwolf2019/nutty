@@ -182,18 +182,14 @@ func (a *app) titleText() string {
 // the info panel: an "Info" pill and icons for the outline, git and files
 // sections, then the panel toggle. The open section is highlighted; the
 // pill's click closes the panel when the Info section is open, and the
-// panel toggle shows or hides it. The column itself is always there; the
-// icons appear only when the pointer is over it, as otty reveals its
-// toolbar.
+// panel toggle shows or hides it. The open panel's toolbar stays on the
+// strip, as otty always shows it.
 func (a *app) infoToolbar(c *ui.Context) {
 	t := c.Theme()
-	box := ui.Box(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
-		BorderWidth(0, 0, 0, 1).BorderColor(t.Border)
-	if box.Hovered() {
-		box.Children(func() {
+	ui.Box(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
+		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
 			a.infoToolbarRow(c)
 		})
-	}
 }
 
 // infoToolbarRow is the info panel's mode switch: the "Info" pill, the
@@ -257,17 +253,14 @@ func (a *app) tabButton(c *ui.Context, key string, icon *ui.SVG, tip string, tab
 }
 
 // chatToolbar is the chat panel's header row, in the same place the info
-// toolbar sits so the two panels swap in one spot. Like the other
-// toolbars it appears only on hover over the column.
+// toolbar sits so the two panels swap in one spot. The open panel's
+// header stays on the strip, as otty always shows it.
 func (a *app) chatToolbar(c *ui.Context) {
 	t := c.Theme()
-	box := ui.Box(c).Width(360).FillHeight().Shrink(0).Background(t.Surface).
-		BorderWidth(0, 0, 0, 1).BorderColor(t.Border)
-	if box.Hovered() {
-		box.Children(func() {
+	ui.Box(c).Width(360).FillHeight().Shrink(0).Background(t.Surface).
+		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
 			a.chatToolbarRow(c)
 		})
-	}
 }
 
 // chatToolbarRow is the chat panel's header: the nut, the "Agent" title
