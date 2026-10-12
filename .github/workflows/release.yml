@@ -45,6 +45,11 @@ jobs:
       - name: Build the universal app and disk image
         run: go run github.com/egoist/mygo/cmd/mygo@v0.4.2 build -platform darwin/universal -o out
 
+      # mygo read the aligned version above; GoReleaser refuses a dirty
+      # tree, so put mygo.json back the way the tag has it.
+      - name: Restore the version file
+        run: git restore mygo.json
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
