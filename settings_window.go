@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -32,6 +33,7 @@ type settingsWindow struct {
 	keys  keybindPage
 	settingsSearch string // the Advanced page's filter
 	profileSel int        // the profile the editor shows, or -1
+	dataBreath uint64     // clicks of the Data row, its icon's breath count
 }
 
 // colorWells hold the buffers of the color pickers, one per color
@@ -165,14 +167,38 @@ func (sw *settingsWindow) categoryItem(c *ui.Context, id, title string) {
 		// list's left edge; a shrink-to-fit row would center on the button.
 		ui.Row(c).FillWidth().Gap(10).Children(func() {
 			if icon := settingsCategoryIcon(id); icon != nil {
-				ui.Image(c, icon).Size(18, 18).TextColor(sw.categoryColor(t, id))
+				img := ui.Image(c, icon).Size(18, 18).TextColor(sw.categoryColor(t, id))
+				if id == "data" {
+					sw.breatheData(c, img)
+				}
 			}
 			ui.Text(c, title).FontSize(13).SingleLine().TextColor(sw.categoryColor(t, id))
 		})
 	})
 	if b.Clicked() {
 		sw.page = id
+		if id == "data" {
+			sw.dataBreath++
+		}
 	}
+}
+
+// breatheData plays the data icon's breath: a click of the Data row puffs
+// its database once, as otty's SMIL morph replays on the click of the row.
+// mygo parses SVG statically, so the puff is a Keyframes scale on the icon's
+// pose instead of the path morph: one cycle per click, on otty's 0.983 s
+// period, held at rest until the next click.
+func (sw *settingsWindow) breatheData(c *ui.Context, img ui.Element) {
+	if sw.dataBreath == 0 {
+		return // the row was never clicked; nothing to breathe
+	}
+	scale := img.Keyframes("breath", []ui.Keyframe{
+		{At: 0, Value: 1, Ease: ui.EaseInOut},
+		{At: 333 * time.Millisecond, Value: 1.08, Ease: ui.EaseInOut},
+		{At: 667 * time.Millisecond, Value: 1.08, Ease: ui.Linear},
+		{At: 983 * time.Millisecond, Value: 1, Ease: ui.EaseInOut},
+	}, ui.KeyframeOptions{Run: sw.dataBreath})
+	img.AnimatePose(ui.Pose{Scale: scale}, ui.Smooth)
 }
 
 func (sw *settingsWindow) categoryColor(t *ui.Theme, id string) ui.Color {

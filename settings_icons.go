@@ -20,9 +20,11 @@ func (i *settingsIcon) get(data string) *ui.SVG {
 }
 
 // settingsCategoryIcon is the icon otty draws beside each settings category.
-// The paths are otty's own, taken from its settings UI; the classes and
-// animations that drive its hover effects are dropped, as this app draws
-// them static. Profiles, which otty's settings list no longer shows, keeps
+// The paths are otty's own, taken from its settings UI. The animation
+// classes and the database icon's SMIL morph are dropped: mygo parses SVG
+// statically, so they would never play, and the breathing is drawn with a
+// mygo Keyframes pose on a click of the Data row instead (see
+// breatheData). Profiles, which otty's settings list no longer shows, keeps
 // a lucide user card in its place.
 func settingsCategoryIcon(id string) *ui.SVG {
 	switch id {

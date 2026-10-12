@@ -3,7 +3,7 @@ module nutty
 go 1.27.1
 
 require (
-	github.com/egoist/mygo v0.4.5
+	github.com/egoist/mygo v0.4.6
 	github.com/oneo-me/onevra/source v0.2026.5
 	github.com/smallnest/uix v0.0.0-20261010233854-b7cb6248325f
 )

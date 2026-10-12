@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"image"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
@@ -332,4 +335,69 @@ func TestSettingsCategoryIcons(t *testing.T) {
 			t.Errorf("%s: no icon", cat.id)
 		}
 	}
+}
+
+// TestDataBreath checks that a click of the Data row breathes the database
+// icon, and that the breath comes back to rest: at the puff the icon's
+// pixels differ from the rested icon's, and the rested icon matches another
+// rested one. The pose spring in the headless tester shows a frame behind
+// the keyframes (it advances by the time between frames), so the capture
+// sequence is: a frame sets the puff target, the next renders it, and two
+// more frames with a gap settle the icon. The selection the click also
+// causes is the same in every frame compared here, so only the puff shows.
+func TestDataBreath(t *testing.T) {
+	a := &app{settings: defaultSettings()}
+	sw := &settingsWindow{a: a, s: a.settings, last: *a.settings, page: "appearance"}
+	tt := ui.NewTester(sw.view, 760, 800)
+	tt.Frame()
+	if err := tt.Click("Data"); err != nil {
+		t.Fatal(err)
+	}
+	// The click starts the breath; this frame's keyframe is the puff's peak,
+	// which the spring shows on the next frame.
+	time.Sleep(350 * time.Millisecond)
+	tt.Frame()
+	// The spring catches the peak across the gap: the icon puffs here.
+	time.Sleep(400 * time.Millisecond)
+	tt.Frame()
+	puff := breathCrop(t, tt)
+	// The breath (0.983 s) is over; this frame tells the spring to rest...
+	time.Sleep(600 * time.Millisecond)
+	tt.Frame()
+	// ...and with a gap the spring settles there.
+	time.Sleep(700 * time.Millisecond)
+	tt.Frame()
+	rest1 := breathCrop(t, tt)
+	// A rested icon later is the same again.
+	time.Sleep(1200 * time.Millisecond)
+	tt.Frame()
+	rest1b := breathCrop(t, tt)
+	if bytes.Equal(puff, rest1) {
+		t.Fatal("the icon does not change through the breath")
+	}
+	if !bytes.Equal(rest1, rest1b) {
+		t.Fatal("the icon does not return to rest after the breath")
+	}
+}
+
+// breathCrop is the pixels of the settings sidebar around the Data row's
+// icon: everything left of the row's label, where only the icon moves as it
+// breathes. The row's background and label are static across the frames a
+// breath compares.
+func breathCrop(t *testing.T, tt *ui.Tester) []byte {
+	t.Helper()
+	r, ok := tt.Find("Data")
+	if !ok {
+		t.Fatal("no Data row")
+	}
+	crop := image.Rect(0, int(r.Y)-6, int(r.X)+4, int(r.Y)+int(r.H)+6)
+	img := tt.Image()
+	var b []byte
+	for y := max(crop.Min.Y, 0); y < crop.Max.Y && y < img.Bounds().Dy(); y++ {
+		for x := max(crop.Min.X, 0); x < crop.Max.X && x < img.Bounds().Dx(); x++ {
+			i := img.PixOffset(x, y)
+			b = append(b, img.Pix[i], img.Pix[i+1], img.Pix[i+2], img.Pix[i+3])
+		}
+	}
+	return b
 }
