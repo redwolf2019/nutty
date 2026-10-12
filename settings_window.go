@@ -91,7 +91,9 @@ func (sw *settingsWindow) view(c *ui.Context) {
 	c.SetTheme(ottyTheme(c.Theme().Dark))
 	t := c.Theme()
 	sw.syncColors() // the wells show the theme's colors before the controls draw
-	ui.Row(c).Fill().Children(func() {
+	// A Row centers its children vertically; the two columns must fill the
+	// window's height, so they stretch across it.
+	ui.Row(c).Fill().AlignItems(ui.Stretch).Children(func() {
 		// The categories, a column the surface color of the app's rail.
 		ui.Column(c).Width(200).FillHeight().Shrink(0).Background(t.Surface).
 			BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
