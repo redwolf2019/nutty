@@ -235,7 +235,9 @@ func (a *app) infoAction(c *ui.Context, label string, icon *ui.SVG, onClick func
 	b := ui.ButtonBase(c.Key("info-" + strings.ReplaceAll(label, " ", "-"))).
 		FillWidth().Padding(5, 0).Radius(t.Radius).FocusRing(false)
 	b.Children(func() {
-		ui.Row(c).Gap(7).Children(func() {
+		// The row fills the button so the label starts at the panel's left
+		// edge; a shrink-to-fit row would center on the button.
+		ui.Row(c).FillWidth().Gap(7).Children(func() {
 			ui.Image(c, icon).Size(14, 14)
 			ui.Text(c, label).FontSize(12).TextColor(actionGreen(t))
 		})
