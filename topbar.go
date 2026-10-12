@@ -87,14 +87,13 @@ func (a *app) topstrip(c *ui.Context) {
 
 // stripControls is the right end of the Tabs layouts' strip: the toggle
 // that hides the tab bar, and — while no panel is open — the toggle that
-// opens the info panel, at the title's height. As with otty's title-strip
-// controls they appear only while the pointer is over the 220px surface
-// column at the strip's right. An open panel draws its own toggle in its
-// toolbar at the same height.
+// opens the info panel, at the title's height. The closed panel leaves no
+// column behind it, so the strip is the title's color there, and the
+// controls appear only while the pointer is over the room the panel would
+// take, as otty reveals its title-strip controls. An open panel draws its
+// own toggle in its toolbar at the same height.
 func (a *app) stripControls(c *ui.Context) {
-	t := c.Theme()
-	box := ui.Box(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
-		BorderWidth(0, 0, 0, 1).BorderColor(t.Border)
+	box := ui.Box(c).Width(220).FillHeight().Shrink(0)
 	if box.Hovered() {
 		box.Children(func() {
 			ui.Row(c).FillHeight().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
@@ -114,14 +113,13 @@ func (a *app) stripControls(c *ui.Context) {
 
 // sidebarStripToggles is the right end of the Sidebar layout's strip while
 // no panel is open: the toggle that opens the info panel, at the title's
-// height. Like otty's title-strip controls it appears only while the
-// pointer is over the right end; hiding the rail is the strip's left pair,
-// next to the new-tab button, as otty draws them. An open panel's toolbar
-// lives here instead.
+// height. The closed panel leaves no column behind it, so the strip is the
+// title's color there, and the toggle appears only while the pointer is
+// over the room the panel would take, as otty reveals its title-strip
+// controls. Hiding the rail is the strip's left pair, next to the new-tab
+// button, as otty draws them. An open panel's toolbar lives here instead.
 func (a *app) sidebarStripToggles(c *ui.Context) {
-	t := c.Theme()
-	box := ui.Box(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
-		BorderWidth(0, 0, 0, 1).BorderColor(t.Border)
+	box := ui.Box(c).Width(220).FillHeight().Shrink(0)
 	if box.Hovered() {
 		box.Children(func() {
 			ui.Row(c).FillHeight().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
