@@ -249,11 +249,49 @@ func TestAccelerator(t *testing.T) {
 	}
 }
 
+// TestShellArgs checks that a profile's command line splits into
+// arguments with its quotes honored.
+func TestShellArgs(t *testing.T) {
+	cases := []struct{ in string; want int }{
+		{"", 0},
+		{"zsh", 1},
+		{"docker compose up", 3},
+		{"sh -c 'echo hi'", 3},
+		{`bash -c "ls -la"`, 3},
+	}
+	for _, tc := range cases {
+		if got := len(shellArgs(tc.in)); got != tc.want {
+			t.Errorf("shellArgs(%q) = %d args, want %d", tc.in, got, tc.want)
+		}
+	}
+}
+
+// TestProfile checks that the default profile is found by name and that
+// newTerm's profile overrides apply.
+func TestProfile(t *testing.T) {
+	s := defaultSettings()
+	if s.profile() != nil {
+		t.Fatal("no default profile should be chosen")
+	}
+	s.Profiles = []profile{{Name: "Web", Command: "docker compose up", CWD: "/srv"}}
+	s.DefaultProfile = "Web"
+	pr := s.profile()
+	if pr == nil || pr.Name != "Web" {
+		t.Fatalf("profile() = %+v, want Web", pr)
+	}
+	// A default that points nowhere is ignored.
+	s.DefaultProfile = "Gone"
+	if s.profile() != nil {
+		t.Fatal("a missing default profile should be ignored")
+	}
+}
+
 // TestSettingsPagesRender checks that every category draws its page, with
 // the settings the page is known for. Long pages render taller than the
 // window, so each one is drawn in a viewport tall enough for its content.
 func TestSettingsPagesRender(t *testing.T) {
 	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+	a.settings.Profiles = []profile{{Name: "Web", Command: "docker compose up"}}
 	want := map[string][]string{
 		"appearance":  {"Theme", "Font Family", "Cursor Style", "Palette"},
 		"general":     {"Language", "Closing Window", "On Launch"},
@@ -267,9 +305,14 @@ func TestSettingsPagesRender(t *testing.T) {
 		"account":     {"Not signed in"},
 		"remote":      {"Not available in this build."},
 		"key_bindings": {"New Tab", "cmd+t", "Tab 1", "cmd+1"},
+		"advanced":     {"Config File", "All Settings", "font-family", "auto-update"},
+		"profiles":     {"New Profile", "Web", "Command", "Set as Default"},
 	}
 	for _, cat := range settingsCategories {
 		sw := &settingsWindow{a: a, s: a.settings, last: *a.settings, page: cat.id}
+		if cat.id == "profiles" {
+			sw.profileSel = 0
+		}
 		tt := ui.NewTester(sw.view, 760, 1600)
 		tt.Frame()
 		for _, w := range want[cat.id] {

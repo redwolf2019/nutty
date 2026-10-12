@@ -92,8 +92,32 @@ func (a *app) newSession(dir string) *session {
 // terminal, whose dead flag the exit callback sets.
 func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 	theme, darkTheme := a.termThemes()
+	dir := s.dir
+	command := a.settings.Command
+	env := a.settings.envList()
+	// The default profile overrides what new sessions run and where, and
+	// may pick its own themes, as otty's profiles do.
+	if pr := a.settings.profile(); pr != nil {
+		if pr.Command != "" {
+			command = pr.Command
+		}
+		if pr.CWD != "" {
+			dir = pr.CWD
+		}
+		env = append(append([]string{}, env...), validEnv(pr.Env)...)
+		if pr.Theme != "" || pr.ThemeDark != "" {
+			light := themeFor(pr.Theme, false)
+			dark := themeFor(pr.ThemeDark, true)
+			if pr.ThemeDark == "" {
+				dark = themeFor(pr.Theme, true)
+			}
+			theme, darkTheme = light, dark
+		}
+	}
 	term, err := newTerminal(terminal.Options{
-		Dir:         s.dir,
+		Command:     shellArgs(command),
+		Dir:         dir,
+		Env:         env,
 		Font:        a.termFont(),
 		Theme:       theme,
 		DarkTheme:   darkTheme,

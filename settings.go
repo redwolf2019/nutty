@@ -397,6 +397,17 @@ func (s *settings) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// loadSettingsFrom parses a settings file, defaulting the rest, or nil
+// when the file does not parse.
+func loadSettingsFrom(b []byte) *settings {
+	s := defaultSettings()
+	if err := json.Unmarshal(b, s); err != nil {
+		return nil
+	}
+	s.normalize()
+	return s
+}
+
 // normalize makes an older or hand-edited settings file valid: it fills
 // defaults that predate a field, and maps the booleans older builds saved
 // for the settings that are enums now.
@@ -623,11 +634,60 @@ func (s *settings) envList() []string {
 	if s == nil {
 		return nil
 	}
+	return validEnv(s.Env)
+}
+
+// validEnv is the environment entries of a list that have a value, the
+// "NAME=value" ones.
+func validEnv(list []string) []string {
 	out := []string{}
-	for _, e := range s.Env {
+	for _, e := range list {
 		if strings.Contains(e, "=") {
 			out = append(out, e)
 		}
+	}
+	return out
+}
+
+// profile is the default profile, or nil when none is chosen or it no
+// longer exists.
+func (s *settings) profile() *profile {
+	if s == nil || s.DefaultProfile == "" {
+		return nil
+	}
+	for i := range s.Profiles {
+		if s.Profiles[i].Name == s.DefaultProfile {
+			return &s.Profiles[i]
+		}
+	}
+	return nil
+}
+
+// shellArgs splits a command line into arguments, honoring single and
+// double quotes, so "sh -c 'echo hi'" keeps its two words together.
+func shellArgs(s string) []string {
+	var out []string
+	var cur strings.Builder
+	var quote rune
+	for _, r := range s {
+		switch {
+		case quote == '\'' && r == '\'' || quote == '"' && r == '"':
+			quote = 0
+		case quote != 0:
+			cur.WriteRune(r)
+		case r == '\'' || r == '"':
+			quote = r
+		case r == ' ' || r == '\t':
+			if cur.Len() > 0 {
+				out = append(out, cur.String())
+				cur.Reset()
+			}
+		default:
+			cur.WriteRune(r)
+		}
+	}
+	if cur.Len() > 0 {
+		out = append(out, cur.String())
 	}
 	return out
 }

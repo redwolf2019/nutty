@@ -30,6 +30,8 @@ type settingsWindow struct {
 	wells colorWells
 	lists map[string]*string // def key -> list editor buffer
 	keys  keybindPage
+	settingsSearch string // the Advanced page's filter
+	profileSel int        // the profile the editor shows, or -1
 }
 
 // colorWells hold the buffers of the color pickers, one per color
@@ -423,17 +425,6 @@ func (sw *settingsWindow) paletteGrid(c *ui.Context) {
 
 // --- pages without a real implementation yet ------------------------------
 
-// pageProfiles is the Profiles category; the editor lands in a later pass.
-func (sw *settingsWindow) pageProfiles(c *ui.Context) {
-	sw.pageUnavailable(c, "Profiles", "Profiles come next; the default profile starts every new pane.")
-}
-
-// pageAdvanced is the Advanced category; the All Settings list lands in a
-// later pass.
-func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
-	sw.pageUnavailable(c, "Advanced", "The All Settings list comes next.")
-}
-
 // pageData is the Data category: cloud sync, which this build has no
 // backend for. Otty shows the same notice when the feature is absent.
 func (sw *settingsWindow) pageData(c *ui.Context) {
@@ -553,6 +544,36 @@ func (sw *settingsWindow) syncColors() {
 		i := i
 		d := *defByKey(fmt.Sprintf("palette-%d", i))
 		sync(d, func(v string) { d.set(sw.s, v) })
+	}
+	// The unmodeled color keys of the All Settings list edit through the
+	// Extra map, with the same well bookkeeping.
+	for _, x := range extraSettings {
+		if x.kind != "color" {
+			continue
+		}
+		st := sw.extraWellState("extra:" + x.key)
+		hex := extraString(sw.s, x.key)
+		def := th.Foreground
+		if !sw.wells.init {
+			if hex != "" {
+				st.color = ui.Hex(hex)
+				st.inUse = true
+			} else {
+				st.color = def
+			}
+			st.base = st.color
+			continue
+		}
+		if !st.inUse {
+			st.base, st.color = def, def
+		}
+		if st.color != st.base {
+			st.inUse = true
+			st.base = st.color
+			sw.s.Extra[x.key] = colorHex(st.color)
+		} else if st.inUse {
+			sw.s.Extra[x.key] = colorHex(st.color)
+		}
 	}
 	sw.wells.init = true
 }
