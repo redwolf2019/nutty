@@ -1,7 +1,7 @@
 // Icon renders assets/nutty.svg into resources/icon.png, the app icon,
 // with MyGo's own headless renderer: go run ./tools/icon
 //
-// The icon follows the reference format: the acorn on a rounded black
+// The icon follows the reference format: the nut mark on a rounded black
 // tile with a transparent background.
 package main
 
@@ -33,12 +33,40 @@ func main() {
 		})
 	}, int(w), int(h))
 	img := tt.Image()
-	// The headless renderer paints the theme's white background; drop it
-	// so the icon keeps a transparent background around the black tile.
+	// The headless renderer paints the theme's white background; drop
+	// everything outside the black tile, whose rounded corners it keeps.
+	// The logo's own white stays: it lies inside the tile.
+	ts := int(tile)
+	r := int(float32(ts) * 0.22)
+	x0, y0 := (int(w)-ts)/2, (int(h)-ts)/2
+	inTile := func(x, y int) bool {
+		if x < x0 || y < y0 || x >= x0+ts || y >= y0+ts {
+			return false
+		}
+		// Only the four corner quadrants cut in: a pixel there is inside
+		// when it lies within the corner's circle; everywhere else in the
+		// square is inside.
+		cx, cy := x0+r, y0+r
+		corner := false
+		switch {
+		case x < x0+r && y < y0+r:
+			corner = true
+		case x >= x0+ts-r && y < y0+r:
+			cx, cy, corner = x0+ts-r, y0+r, true
+		case x < x0+r && y >= y0+ts-r:
+			cx, cy, corner = x0+r, y0+ts-r, true
+		case x >= x0+ts-r && y >= y0+ts-r:
+			cx, cy, corner = x0+ts-r, y0+ts-r, true
+		}
+		if !corner {
+			return true
+		}
+		dx, dy := x-cx, y-cy
+		return dx*dx+dy*dy <= r*r
+	}
 	for y := img.Bounds().Min.Y; y < img.Bounds().Max.Y; y++ {
 		for x := img.Bounds().Min.X; x < img.Bounds().Max.X; x++ {
-			p := img.RGBAAt(x, y)
-			if p.A > 0 && p.R > 0xF0 && p.G > 0xF0 && p.B > 0xF0 {
+			if !inTile(x, y) {
 				img.SetRGBA(x, y, color.RGBA{})
 			}
 		}

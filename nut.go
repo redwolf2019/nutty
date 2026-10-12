@@ -9,7 +9,8 @@ import (
 //go:embed assets/nutty.svg
 var nuttySVGSource string
 
-// nuttySVG is the app's mark: a slim acorn in black and white.
+// nuttySVG is the app's mark: the SVG Repo nut — a white beech-nut with
+// a gray cap on black outlines, which reads on the black tile below.
 var nuttySVG = ui.MustParseSVG([]byte(nuttySVGSource))
 
 // nutTile draws the mark on a black tile, matching the app icon, so it
