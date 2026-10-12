@@ -253,7 +253,7 @@ func TestInfoTabs(t *testing.T) {
 			files: []tree.Item{
 				{Label: "assets", Open: &open, Children: []tree.Item{
 					{Label: "nutty.svg"},
-					{Label: "JetBrainsMono.ttf"},
+					{Label: "JetBrainsMonoNerdFontMono.ttf"},
 				}},
 				{Label: "main.go"},
 				{Label: "session.go"},

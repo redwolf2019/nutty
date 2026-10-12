@@ -7,21 +7,33 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// The fonts otty ships, so Nutty's terminal shows the same text: JetBrains
-// Mono (SIL Open Font License) in its regular and italic faces.
+// The terminal font: JetBrains Mono Nerd Font (SIL Open Font License),
+// v3.5.1's monospaced build from the nerd-fonts release, which carries the
+// icon glyphs shell prompts draw alongside JetBrains Mono's own faces. The
+// Mono variant keeps every glyph — the icons included — at one cell width,
+// so prompts with symbols do not break column alignment.
 //
-//go:embed assets/JetBrainsMono.ttf
+//go:embed assets/JetBrainsMonoNerdFontMono-Regular.ttf
 var jetbrainsMonoTTF []byte
 
-//go:embed assets/JetBrainsMono-Italic.ttf
+//go:embed assets/JetBrainsMonoNerdFontMono-Bold.ttf
+var jetbrainsMonoBoldTTF []byte
+
+//go:embed assets/JetBrainsMonoNerdFontMono-Italic.ttf
 var jetbrainsMonoItalicTTF []byte
 
-// registerFonts makes JetBrains Mono available to text before any window
-// draws. The italic registers under the same family, so Core Text matches
-// it by trait, as the regular's bold is synthesized by weight.
+//go:embed assets/JetBrainsMonoNerdFontMono-BoldItalic.ttf
+var jetbrainsMonoBoldItalicTTF []byte
+
+// registerFonts makes the font available to text before any window draws.
+// All four faces register under "JetBrains Mono", the name the settings
+// use, so Core Text matches bold and italic by trait instead of the app
+// synthesizing them.
 func registerFonts() {
 	ui.RegisterFont(jetbrainsMonoTTF, "JetBrains Mono")
+	ui.RegisterFont(jetbrainsMonoBoldTTF, "JetBrains Mono")
 	ui.RegisterFont(jetbrainsMonoItalicTTF, "JetBrains Mono")
+	ui.RegisterFont(jetbrainsMonoBoldItalicTTF, "JetBrains Mono")
 }
 
 // termFont is the terminal font the settings pick: otty's JetBrains Mono
