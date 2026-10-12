@@ -1,5 +1,6 @@
 {
   "name": "Nutty",
   "identifier": "dev.nutty.app",
-  "macos": { "minimumSystemVersion": "13.0" }
+  "macos": { "minimumSystemVersion": "13.0" },
+  "version": "0.1.0"
 }

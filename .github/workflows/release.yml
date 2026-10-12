@@ -1,0 +1,54 @@
+# A version tag publishes the release: the workflow builds the universal
+# app and disk image with mygo, then GoReleaser uploads them to the tag's
+# GitHub release. Drafting the release was not wanted — the tag alone is
+# the trigger, so a tag push is a release.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # GoReleaser needs the history to write its changelog.
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.27"
+          cache: true
+
+      # The app's version lives in mygo.json; align it with the tag so the
+      # bundle's version and the release version never drift apart.
+      - name: Align the app version with the tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          python3 - "$VERSION" <<'PY'
+          import json, sys
+          path = "mygo.json"
+          config = json.load(open(path))
+          config["version"] = sys.argv[1]
+          json.dump(config, open(path, "w"), indent=2)
+          open(path, "a").write("\n")
+          PY
+
+      - name: Build the universal app and disk image
+        run: go run github.com/egoist/mygo/cmd/mygo@v0.4.2 build -platform darwin/universal -o out
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,16 @@
+version: 2
+
+# GoReleaser runs the release: it reads the tag, writes the changelog, and
+# publishes the artifacts to GitHub. The packaging itself is mygo's — it
+# builds the .app bundle, embeds the terminal plugin, signs it, and makes
+# the disk image — so no builds happen here, only the upload of the DMG
+# the workflow just built.
+project_name: Nutty
+
+builds:
+  - skip: true
+
+release:
+  draft: false
+  extra_files:
+    - glob: ./out/darwin-universal/Nutty*.dmg
