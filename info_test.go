@@ -60,3 +60,30 @@ func TestGitStatusLabel(t *testing.T) {
 		}
 	}
 }
+
+// TestStaleInfoCommit checks when a Git or Files load's commit must be
+// dropped: the active session switched while the load ran, or the session's
+// directory moved on, so a newer load owns the panel's data.
+func TestStaleInfoCommit(t *testing.T) {
+	same := &session{id: 1, dir: "/a"}
+	moved := &session{id: 2, dir: "/a"}
+	moved.dir = "/b" // the directory moved on while the load ran
+	other := &session{id: 3, dir: "/b"}
+	tests := []struct {
+		name   string
+		cur    *session
+		loaded *session
+		dir    string
+		want   bool
+	}{
+		{"directory unchanged", same, same, "/a", false},
+		{"directory moved on", moved, moved, "/a", true},
+		{"session switched", other, same, "/a", true},
+		{"no session", nil, nil, "", false},
+	}
+	for _, tc := range tests {
+		if got := staleInfoCommit(tc.cur, tc.loaded, tc.dir); got != tc.want {
+			t.Errorf("%s: staleInfoCommit = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}

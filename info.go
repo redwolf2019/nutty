@@ -401,18 +401,25 @@ func (a *app) loadGit() {
 	a.info.git.done = false
 	go func() {
 		s := a.currentSession()
+		dir := ""
 		var branch string
 		var changes []gitChange
 		if s != nil {
+			dir = s.dir
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			out, err := exec.CommandContext(ctx, "git", "-C", s.dir,
+			out, err := exec.CommandContext(ctx, "git", "-C", dir,
 				"status", "--porcelain=v1", "-b").Output()
 			if err == nil {
 				branch, changes = parseGitStatus(string(out))
 			}
 		}
 		a.win.Update(func() {
+			// A directory changed mid-load: the newer load owns the panel,
+			// and this stale one must not commit over it.
+			if staleInfoCommit(a.currentSession(), s, dir) {
+				return
+			}
 			keep := a.info.git.diffOpen
 			a.info.git.branch = branch
 			a.info.git.changes = changes
@@ -420,6 +427,16 @@ func (a *app) loadGit() {
 			a.info.git.diffOpen = keep
 		})
 	}()
+}
+
+// staleInfoCommit reports whether a loader's commit must be dropped: the
+// active session changed while the loader ran, or the session's directory
+// moved on, so a newer load owns the panel's data.
+func staleInfoCommit(cur, loaded *session, dir string) bool {
+	if cur != loaded {
+		return true
+	}
+	return loaded != nil && loaded.dir != dir
 }
 
 // parseGitStatus reads git status --porcelain=v1 -b output: the branch
@@ -603,12 +620,19 @@ func (a *app) loadFiles() {
 	a.info.filesDone = false
 	go func() {
 		s := a.currentSession()
+		dir := ""
 		var items []tree.Item
 		if s != nil {
+			dir = s.dir
 			nodes := 0
-			items = buildFileTree(s.dir, 0, &nodes)
+			items = buildFileTree(dir, 0, &nodes)
 		}
 		a.win.Update(func() {
+			// A directory changed mid-walk: the newer walk owns the panel,
+			// and this stale one must not commit over it.
+			if staleInfoCommit(a.currentSession(), s, dir) {
+				return
+			}
 			a.info.files = items
 			a.info.filesDone = true
 		})
