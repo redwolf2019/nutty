@@ -20,8 +20,12 @@ github.com/go-text/typesetting-utils v0.0.0-20260419141703-4ffe8874dabc h1:8FGo2
 github.com/go-text/typesetting-utils v0.0.0-20260419141703-4ffe8874dabc/go.mod h1:3/62I4La/HBRX9TcTpBj4eipLiwzf+vhI+7whTc9V7o=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
 github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
+github.com/oneo-me/onevra v0.0.0-20261012154452-d940e7cbed98 h1:YAol4GCbGBrl41qkL/kBze+nOD+b+Jyt2JtlagRkRe4=
+github.com/oneo-me/onevra v0.0.0-20261012154452-d940e7cbed98/go.mod h1:caOsB1TByy+pW8R9/lKqHS5VNe54Ai2M65vW8dKqoJc=
 github.com/oneo-me/onevra/source v0.2026.5 h1:IxPGl0CfbjqUYxM4gHs3RbVtRLfl2qIvBSive5M61jc=
 github.com/oneo-me/onevra/source v0.2026.5/go.mod h1:/43dexZ4jRB/TuRy2HYaf0nSTkurA3ISIKKWJFb9riM=
+github.com/oneo-me/onevra/source v0.2026.7 h1:BXFdo/ekqnKblwwKbv1MShuUM3CFxxongVPr0xKkhAk=
+github.com/oneo-me/onevra/source v0.2026.7/go.mod h1:/U7dISV2QHjDpZLJ3tbtDjByIOeU8+H5MClido0Qgiw=
 github.com/smallnest/uix v0.0.0-20261010233854-b7cb6248325f h1:L/Jah+KMbZYAQXNjz+d3YE6w4MmwoZBFgR47jutaN34=
 github.com/smallnest/uix v0.0.0-20261010233854-b7cb6248325f/go.mod h1:MF6/TR9hosdO1j9L14IOwoZRy3e6aK3BQ2u01teDvWo=
 github.com/yuin/goldmark v1.8.6 h1:d0VcaP1sx9GkFVkoW+KtggpGi2KZ965i14b0+bDQST4=

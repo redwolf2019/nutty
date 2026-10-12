@@ -10,6 +10,7 @@ import (
 
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
+	"github.com/oneo-me/onevra/source/components"
 )
 
 // TestSettingsJSON checks that the settings survive a save and load, and
@@ -312,7 +313,10 @@ func TestSettingsPagesRender(t *testing.T) {
 		"profiles":     {"New Profile", "Web", "Command", "Set as Default"},
 	}
 	for _, cat := range settingsCategories {
-		sw := &settingsWindow{a: a, s: a.settings, last: *a.settings, page: cat.id}
+		sw := &settingsWindow{
+			a: a, s: a.settings, last: *a.settings,
+			state: components.SettingsState{Category: cat.id},
+		}
 		if cat.id == "profiles" {
 			sw.profileSel = 0
 		}
@@ -347,7 +351,8 @@ func TestSettingsCategoryIcons(t *testing.T) {
 // causes is the same in every frame compared here, so only the puff shows.
 func TestDataBreath(t *testing.T) {
 	a := &app{settings: defaultSettings()}
-	sw := &settingsWindow{a: a, s: a.settings, last: *a.settings, page: "appearance"}
+	sw := &settingsWindow{a: a, s: a.settings, last: *a.settings,
+		state: components.SettingsState{Category: "appearance"}}
 	tt := ui.NewTester(sw.view, 760, 800)
 	tt.Frame()
 	if err := tt.Click("Data"); err != nil {
@@ -381,16 +386,19 @@ func TestDataBreath(t *testing.T) {
 }
 
 // breathCrop is the pixels of the settings sidebar around the Data row's
-// icon: everything left of the row's label, where only the icon moves as it
-// breathes. The row's background and label are static across the frames a
-// breath compares.
+// icon: the icon's square, the only thing that moves as it breathes. The
+// row's background and label are static across the frames a breath
+// compares.
 func breathCrop(t *testing.T, tt *ui.Tester) []byte {
 	t.Helper()
 	r, ok := tt.Find("Data")
 	if !ok {
 		t.Fatal("no Data row")
 	}
-	crop := image.Rect(0, int(r.Y)-6, int(r.X)+4, int(r.Y)+int(r.H)+6)
+	// Find returns the row's button, which spans the sidebar; the icon
+	// sits just right of its left padding. Crop that square, ending where
+	// the label starts.
+	crop := image.Rect(int(r.X), int(r.Y)-6, int(r.X)+34, int(r.Y)+int(r.H)+6)
 	img := tt.Image()
 	var b []byte
 	for y := max(crop.Min.Y, 0); y < crop.Max.Y && y < img.Bounds().Dy(); y++ {

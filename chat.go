@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
-	"github.com/oneo-me/onevra/source/plugins/markdown"
+	"github.com/oneo-me/onevra/source/components/markdown"
 	"github.com/smallnest/uix/components/composer"
 	"github.com/smallnest/uix/components/thinking"
 )

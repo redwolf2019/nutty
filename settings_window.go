@@ -8,6 +8,7 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+	"github.com/oneo-me/onevra/source/components"
 	"github.com/oneo-me/onevra/source/icons/lucide"
 	"github.com/smallnest/uix/components/colorwell"
 	"github.com/smallnest/uix/components/field"
@@ -18,16 +19,18 @@ import (
 	uixswitch "github.com/smallnest/uix/components/switch"
 )
 
-// settingsWindow is the Settings window: otty's categories on the left,
-// the chosen one's controls on the right, every change applied live and
-// saved. It edits the app's settings in place, so the main window and the
-// settings agree.
+// settingsWindow is the Settings window. It is the shell of onevra's
+// Settings component: otty's categories on the left, searchable, each
+// category's groups and controls on the right, every change applied live
+// and saved. It edits the app's settings in place, so the main window and
+// the settings agree.
 type settingsWindow struct {
 	a     *app
 	s     *settings
 	win   *mygo.Window
 	last  settings // the applied snapshot; a difference means a change
-	page  string   // the chosen category
+	state components.SettingsState // the category and search the shell shows
+	lastCat string                 // the category of the last frame, the breath's hook
 	wells colorWells
 	lists map[string]*string // def key -> list editor buffer
 	keys  keybindPage
@@ -75,7 +78,7 @@ func newSettingsWindow(a *app) *mygo.Window {
 		a:    a,
 		s:    a.settings,
 		last: *a.settings,
-		page: "appearance",
+		state: components.SettingsState{Category: "appearance"},
 	}
 	sw.win = mygo.NewWindow(mygo.WindowOptions{
 		Title:      "Settings",
@@ -91,96 +94,54 @@ func newSettingsWindow(a *app) *mygo.Window {
 
 func (sw *settingsWindow) view(c *ui.Context) {
 	c.SetTheme(ottyTheme(c.Theme().Dark))
-	t := c.Theme()
 	sw.syncColors() // the wells show the theme's colors before the controls draw
-	// A Row centers its children vertically; the two columns must fill the
-	// window's height, so they stretch across it.
-	ui.Row(c).Fill().AlignItems(ui.Stretch).Children(func() {
-		// The categories, a column the surface color of the app's rail.
-		ui.Column(c).Width(200).FillHeight().Shrink(0).Background(t.Surface).
-			BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
-				ui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
-					ui.Column(c).FillWidth().Padding(10).Gap(1).Children(func() {
-						for _, cat := range settingsCategories {
-							sw.categoryItem(c, cat.id, cat.title)
-						}
-					})
-				})
-			})
-		// The chosen category's controls.
-		ui.Scroll(c).Grow(1).MinWidth(0).Children(func() {
-			ui.Column(c).FillWidth().Padding(24, 28).MaxWidth(560).Gap(18).Children(func() {
-				for _, cat := range settingsCategories {
-					if cat.id == sw.page {
-						ui.Text(c, cat.title).FontSize(17).Bold()
-					}
-				}
-				switch sw.page {
-				case "appearance":
-					sw.pageAppearance(c)
-				case "general":
-					sw.pageFromGroups(c, "general")
-				case "shell":
-					sw.pageFromGroups(c, "shell")
-				case "controls":
-					sw.pageFromGroups(c, "controls")
-				case "editor":
-					sw.pageFromGroups(c, "editor")
-				case "view":
-					sw.pageView(c)
-				case "recipes":
-					sw.pageFromGroups(c, "recipes")
-				case "agents":
-					sw.pageFromGroups(c, "agents")
-				case "data":
-					sw.pageData(c)
-				case "account":
-					sw.pageAccount(c)
-				case "remote":
-					sw.pageRemote(c)
-				case "profiles":
-					sw.pageProfiles(c)
-				case "key_bindings":
-					sw.pageKeyBindings(c)
-				case "advanced":
-					sw.pageAdvanced(c)
-				}
-			})
-		})
-	})
+	components.Settings(c, &sw.state, sw.settingsCategoriesFor(), components.SettingsOptions{})
+	// The shell's own row click sets the selection; a click of the Data
+	// row also breathes its database icon, one cycle per click.
+	if sw.state.Category == "data" && sw.state.Category != sw.lastCat {
+		sw.dataBreath++
+	}
+	sw.lastCat = sw.state.Category
 	// A change the controls made applies and saves.
 	sw.sync()
 }
 
-// categoryItem is one row of the category list: the category's icon and
-// its name, the chosen one shown on a pressed background, as otty draws
-// them.
-func (sw *settingsWindow) categoryItem(c *ui.Context, id, title string) {
-	t := c.Theme()
-	b := ui.ButtonBase(c.Key("set-cat-" + id)).FillWidth().
-		Padding(7, 8).Radius(t.Radius).FocusRing(false)
-	if sw.page == id {
-		b.Background(t.SurfacePressed)
-	}
-	b.Children(func() {
-		// The row fills the button so the icon and the label start at the
-		// list's left edge; a shrink-to-fit row would center on the button.
-		ui.Row(c).FillWidth().Gap(10).Children(func() {
-			if icon := settingsCategoryIcon(id); icon != nil {
-				img := ui.Image(c, icon).Size(18, 18).TextColor(sw.categoryColor(t, id))
-				if id == "data" {
-					sw.breatheData(c, img)
-				}
-			}
-			ui.Text(c, title).FontSize(13).SingleLine().TextColor(sw.categoryColor(t, id))
+// settingsCategoriesFor is the shell's navigation: otty's categories in
+// their order, each with the groups and items of its page. It is rebuilt
+// every frame, so the items' closures see this frame's values; nothing is
+// cached.
+func (sw *settingsWindow) settingsCategoriesFor() []components.SettingsCategory {
+	cats := make([]components.SettingsCategory, 0, len(settingsCategories))
+	for _, cat := range settingsCategories {
+		cats = append(cats, components.SettingsCategory{
+			ID:      cat.id,
+			Title:   cat.title,
+			Leading: sw.categoryLeading(cat.id),
+			Groups:  sw.groupsFor(cat.id),
 		})
-	})
-	if b.Clicked() {
-		sw.page = id
-		if id == "data" {
-			sw.dataBreath++
+	}
+	return cats
+}
+
+// categoryLeading is a sidebar row's icon: otty's own SVG, muted or lit
+// with the selection, and the Data row's icon breathes on each click of
+// the row (see breatheData).
+func (sw *settingsWindow) categoryLeading(id string) func(c *ui.Context, size float32) {
+	return func(c *ui.Context, size float32) {
+		if icon := settingsCategoryIcon(id); icon != nil {
+			img := ui.Image(c, icon).Size(size, size).TextColor(sw.categoryColor(c.Theme(), id))
+			if id == "data" {
+				sw.breatheData(c, img)
+			}
 		}
 	}
+}
+
+func (sw *settingsWindow) categoryColor(t *ui.Theme, id string) ui.Color {
+	if sw.state.Category == id {
+		return t.Text
+	}
+	return t.TextMuted
 }
 
 // breatheData plays the data icon's breath: a click of the Data row puffs
@@ -201,26 +162,190 @@ func (sw *settingsWindow) breatheData(c *ui.Context, img ui.Element) {
 	img.AnimatePose(ui.Pose{Scale: scale}, ui.Smooth)
 }
 
-func (sw *settingsWindow) categoryColor(t *ui.Theme, id string) ui.Color {
-	if sw.page == id {
-		return t.Text
+// --- the categories of the shell -------------------------------------------
+
+// groupsFor is one category's groups for the shell. The pages the
+// registry drives map straight to groups of items; Profiles, Key
+// Bindings and Advanced draw their whole page in one item, as do the
+// notices of the pages without a form.
+func (sw *settingsWindow) groupsFor(id string) []components.SettingsGroup {
+	switch id {
+	case "appearance":
+		return sw.appearanceGroups()
+	case "view":
+		return sw.viewGroups()
+	case "profiles":
+		return []components.SettingsGroup{pageItem(func(c *ui.Context) { sw.pageProfiles(c) })}
+	case "key_bindings":
+		return []components.SettingsGroup{pageItem(func(c *ui.Context) { sw.pageKeyBindings(c) })}
+	case "advanced":
+		return []components.SettingsGroup{pageItem(func(c *ui.Context) { sw.pageAdvanced(c) })}
+	case "data":
+		return noticeGroup("Sync & Backup", "Not available in this build")
+	case "account":
+		return noticeGroup("Account", "Not signed in")
+	case "remote":
+		return noticeGroup("Remote", "Not available in this build.")
+	default:
+		return sw.registryGroups(id)
 	}
-	return t.TextMuted
 }
 
-// --- the registry-driven pages --------------------------------------------
+// pageItem is the group of a category that draws its whole page itself:
+// an unheaded group with one item that fills the row. The shell's row
+// shows an empty title and would give the page only its intrinsic width;
+// a minimum wider than any content makes the row hand it everything.
+func pageItem(build func(c *ui.Context)) components.SettingsGroup {
+	return components.SettingsGroup{ID: "page", Items: []components.SettingsItem{{
+		ID: "page",
+		Build: func(c *ui.Context) {
+			ui.Column(c).FillWidth().MinWidth(560).Children(func() { build(c) })
+		},
+	}}}
+}
 
-// pageFromGroups renders one category's groups from the settings registry:
-// the sections of settingsGroups[id], each setting drawn from its def.
-func (sw *settingsWindow) pageFromGroups(c *ui.Context, id string) {
+// noticeGroup is a category without a form: a heading and the muted
+// notice otty shows for the absent feature.
+func noticeGroup(title, notice string) []components.SettingsGroup {
+	return []components.SettingsGroup{{
+		ID: title, Title: title,
+		Items: []components.SettingsItem{{ID: "notice", Description: notice}},
+	}}
+}
+
+// registryGroups is the shell's groups of one page: each otty section of
+// the registry becomes a group, each setting an item whose row shows its
+// label and description and whose control edits the value.
+func (sw *settingsWindow) registryGroups(id string) []components.SettingsGroup {
+	groups := make([]components.SettingsGroup, 0, len(settingsGroups[id]))
 	for _, g := range settingsGroups[id] {
-		sw.group(c, g.title, func() {
-			for _, key := range g.keys {
-				if d := defByKey(key); d != nil {
-					sw.renderSetting(c, *d)
-				}
+		items := make([]components.SettingsItem, 0, len(g.keys))
+		for _, key := range g.keys {
+			if d := defByKey(key); d != nil {
+				d := *d
+				items = append(items, components.SettingsItem{
+					ID: d.key, Title: d.label, Description: d.desc,
+					Keywords: []string{d.key},
+					Build:    func(c *ui.Context) { sw.control(c, d) },
+				})
 			}
+		}
+		groups = append(groups, components.SettingsGroup{ID: g.title, Title: g.title, Items: items})
+	}
+	return groups
+}
+
+// appearanceGroups is the Appearance page: the registry's groups, with
+// the sixteen palette colors as a grid inside the Colors section, as
+// otty draws them.
+func (sw *settingsWindow) appearanceGroups() []components.SettingsGroup {
+	groups := sw.registryGroups("appearance")
+	for i := range groups {
+		if groups[i].ID == "Colors" {
+			groups[i].Items = append(groups[i].Items, components.SettingsItem{
+				ID: "palette", Title: "Palette",
+				Description: "The sixteen ANSI colors of the terminal palette.",
+				Keywords:    []string{"palette", "ansi", "color"},
+				Build:       func(c *ui.Context) { sw.paletteGrid(c) },
+			})
+		}
+	}
+	return groups
+}
+
+// viewGroups is the View page: the registry's groups, and the Details
+// Panel's tabs, each with its enable switch and the arrows to reorder it.
+func (sw *settingsWindow) viewGroups() []components.SettingsGroup {
+	groups := sw.registryGroups("view")
+	details := components.SettingsGroup{ID: "Details Panel", Title: "Details Panel"}
+	for _, v := range sw.s.DetailsViews {
+		id, title := v.ID, v.Title
+		details.Items = append(details.Items, components.SettingsItem{
+			ID: id, Title: title,
+			Description: "A tab of the details panel on the right; the arrows reorder it.",
+			Keywords:    []string{"details", "panel"},
+			Build: func(c *ui.Context) {
+				p := sw.detailsView(id)
+				if p == nil {
+					return
+				}
+				idx := sw.detailsViewIndex(id)
+				ui.Row(c).Gap(8).Children(func() {
+					uixswitch.Switch(c, uixswitch.Props{On: &p.Enabled})
+					ui.Box(c).Grow(1)
+					sw.moveButton(c, "up-"+id, lucide.ChevronUp(), idx > 0, func() { sw.moveViewByID(id, -1) })
+					sw.moveButton(c, "down-"+id, lucide.ChevronDown(), idx < len(sw.s.DetailsViews)-1, func() { sw.moveViewByID(id, 1) })
+				})
+			},
 		})
+	}
+	return append(groups, details)
+}
+
+// detailsView is the details panel's tab of an id, or nil. The item
+// looks it up on the frame it builds, so a reorder never leaves a stale
+// pointer behind.
+func (sw *settingsWindow) detailsView(id string) *detailsView {
+	for i := range sw.s.DetailsViews {
+		if sw.s.DetailsViews[i].ID == id {
+			return &sw.s.DetailsViews[i]
+		}
+	}
+	return nil
+}
+
+func (sw *settingsWindow) detailsViewIndex(id string) int {
+	for i := range sw.s.DetailsViews {
+		if sw.s.DetailsViews[i].ID == id {
+			return i
+		}
+	}
+	return -1
+}
+
+// moveViewByID shifts a details view by its id in the list, clamping at
+// the ends.
+func (sw *settingsWindow) moveViewByID(id string, delta int) {
+	i := sw.detailsViewIndex(id)
+	v := sw.s.DetailsViews
+	j := i + delta
+	if i < 0 || j < 0 || j >= len(v) {
+		return
+	}
+	v[i], v[j] = v[j], v[i]
+}
+
+// --- the settings' controls ------------------------------------------------
+
+// control draws one setting's control alone: the shell's item row shows
+// the label and description, so only the control belongs here. The
+// Advanced page's All Settings list keeps the field wrapper (see
+// renderSetting).
+func (sw *settingsWindow) control(c *ui.Context, d settingDef) {
+	switch d.kind {
+	case "bool":
+		uixswitch.Switch(c, uixswitch.Props{On: d.ptr(sw.s).(*bool)})
+	case "enum":
+		cur := d.get(sw.s).(string)
+		show := enumLabel(d, cur)
+		labels := make([]string, len(d.enum))
+		for i, o := range d.enum {
+			labels[i] = o.label
+		}
+		uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels})
+		if show != enumLabel(d, cur) {
+			d.set(sw.s, enumValue(d, show))
+		}
+	case "number":
+		numberinput.NumberInput(c, numberinput.Props{
+			Value: d.ptr(sw.s).(*float64), Lo: d.lo, Hi: d.hi, Step: d.step,
+		})
+	case "string":
+		input.Input(c, input.Props{Value: d.ptr(sw.s).(*string)})
+	case "list":
+		sw.renderList(c, d)
+	case "color":
+		sw.colorControls(c, d)
 	}
 }
 
@@ -322,29 +447,36 @@ func splitLines(s string) []string {
 	return out
 }
 
-// renderColorRow is one named color setting: the well, and a Reset that
-// forgets the setting and returns the well to the theme's color.
+// renderColorRow is one named color setting of the All Settings list:
+// the well, and a Reset that forgets the setting and returns the well to
+// the theme's color.
 func (sw *settingsWindow) renderColorRow(c *ui.Context, d settingDef) {
+	field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+		sw.colorControls(c, d)
+	})
+}
+
+// colorControls is one color setting's control: the well, and a Reset
+// that forgets the setting and returns the well to the theme's color.
+func (sw *settingsWindow) colorControls(c *ui.Context, d settingDef) {
 	t := c.Theme()
 	st := sw.wellState(d)
-	field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
-		ui.Row(c).Gap(12).Children(func() {
-			colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: d.label})
-			if st.inUse {
-				rb := ui.ButtonBase(c.Key("reset-" + d.key)).Padding(2, 8).Radius(t.Radius).
-					FocusRing(false).Tooltip("Use the theme's color")
-				rb.Children(func() {
-					ui.Row(c).Gap(4).Children(func() {
-						ui.Image(c, lucide.RotateCcw()).Size(12, 12)
-						ui.Text(c, "Reset").FontSize(12).TextColor(t.TextMuted)
-					})
+	ui.Row(c).Gap(12).Children(func() {
+		colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: d.label})
+		if st.inUse {
+			rb := ui.ButtonBase(c.Key("reset-" + d.key)).Padding(2, 8).Radius(t.Radius).
+				FocusRing(false).Tooltip("Use the theme's color")
+			rb.Children(func() {
+				ui.Row(c).Gap(4).Children(func() {
+					ui.Image(c, lucide.RotateCcw()).Size(12, 12)
+					ui.Text(c, "Reset").FontSize(12).TextColor(t.TextMuted)
 				})
-				if rb.Clicked() {
-					d.set(sw.s, "")
-					st.inUse = false
-				}
+			})
+			if rb.Clicked() {
+				d.set(sw.s, "")
+				st.inUse = false
 			}
-		})
+		}
 	})
 }
 
@@ -361,26 +493,6 @@ func (sw *settingsWindow) wellState(d settingDef) *colorWellState {
 	return st
 }
 
-// pageView is the View category: the registry's tab and badge settings,
-// plus the details panel's views, each with its own enable switch and
-// the arrows to reorder it.
-func (sw *settingsWindow) pageView(c *ui.Context) {
-	sw.pageFromGroups(c, "view")
-	sw.group(c, "Details Panel", func() {
-		sw.hint(c, "The tabs of the panel on the right. Disable one to hide it; the arrows reorder them.")
-		for i := range sw.s.DetailsViews {
-			i := i
-			v := &sw.s.DetailsViews[i]
-			ui.Row(c).FillWidth().Gap(8).Children(func() {
-				uixswitch.Switch(c, uixswitch.Props{On: &v.Enabled, Label: v.Title})
-				ui.Box(c).Grow(1)
-				sw.moveButton(c, "up-"+v.ID, lucide.ChevronUp(), i > 0, func() { sw.moveView(i, -1) })
-				sw.moveButton(c, "down-"+v.ID, lucide.ChevronDown(), i < len(sw.s.DetailsViews)-1, func() { sw.moveView(i, 1) })
-			})
-		}
-	})
-}
-
 // moveButton is a small arrow that calls onClick, dimmed when not enabled.
 func (sw *settingsWindow) moveButton(c *ui.Context, key string, icon *ui.SVG, enabled bool, onClick func()) {
 	t := c.Theme()
@@ -394,39 +506,12 @@ func (sw *settingsWindow) moveButton(c *ui.Context, key string, icon *ui.SVG, en
 	}
 }
 
-// moveView shifts one details view in the list, clamping at the ends.
-func (sw *settingsWindow) moveView(i, delta int) {
-	v := sw.s.DetailsViews
-	if j := i + delta; i < 0 || j < 0 || i >= len(v) || j >= len(v) {
-		return
-	}
-	v[i], v[i+delta] = v[i+delta], v[i]
-}
-
-// pageAppearance is the Appearance category: the registry's theme, font,
-// cursor, window and terminal groups, with the sixteen palette colors
-// drawn as a grid inside the Colors section, as otty's appearance does.
-func (sw *settingsWindow) pageAppearance(c *ui.Context) {
-	for _, g := range settingsGroups["appearance"] {
-		sw.group(c, g.title, func() {
-			for _, key := range g.keys {
-				if d := defByKey(key); d != nil {
-					sw.renderSetting(c, *d)
-				}
-			}
-			if g.title == "Colors" {
-				sw.paletteGrid(c)
-			}
-		})
-	}
-}
-
 // paletteGrid is the sixteen palette wells in a grid, and a reset that
-// returns them all to the theme's colors.
+// returns them all to the theme's colors. The item's row supplies the
+// "Palette" title.
 func (sw *settingsWindow) paletteGrid(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).FillWidth().Gap(8).Children(func() {
-		ui.Text(c, "Palette").FontSize(11).Bold().TextColor(t.TextMuted)
 		for row := 0; row < 4; row++ {
 			ui.Row(c).Gap(10).Children(func() {
 				for col := 0; col < 4; col++ {
@@ -457,32 +542,6 @@ func (sw *settingsWindow) paletteGrid(c *ui.Context) {
 				}
 			}
 		}
-	})
-}
-
-// --- pages without a real implementation yet ------------------------------
-
-// pageData is the Data category: cloud sync, which this build has no
-// backend for. Otty shows the same notice when the feature is absent.
-func (sw *settingsWindow) pageData(c *ui.Context) {
-	sw.pageUnavailable(c, "Sync & Backup", "Not available in this build")
-}
-
-// pageAccount is the Account category: the app is signed out.
-func (sw *settingsWindow) pageAccount(c *ui.Context) {
-	sw.pageUnavailable(c, "Account", "Not signed in")
-}
-
-// pageRemote is the Remote category, otty's own notice for it.
-func (sw *settingsWindow) pageRemote(c *ui.Context) {
-	sw.pageUnavailable(c, "Remote", "Not available in this build.")
-}
-
-// pageUnavailable is a category with a heading and a muted notice.
-func (sw *settingsWindow) pageUnavailable(c *ui.Context, title, notice string) {
-	t := c.Theme()
-	sw.group(c, title, func() {
-		ui.Text(c, notice).FontSize(12).TextColor(t.TextMuted)
 	})
 }
 

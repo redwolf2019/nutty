@@ -32,33 +32,31 @@ type keybindRow struct {
 // the menu's accelerators.
 func (sw *settingsWindow) pageKeyBindings(c *ui.Context) {
 	t := c.Theme()
-	sw.group(c, "Key Bindings", func() {
-		ui.Row(c).FillWidth().Gap(8).Children(func() {
-			ui.Box(c).Grow(1).MinWidth(0).Children(func() {
-				searchfield.SearchField(c, searchfield.Props{Value: &sw.keys.search})
-			})
-			if len(sw.s.KeybindOverrides) > 0 {
-				rb := ui.ButtonBase(c.Key("kb-reset-all")).Padding(4, 10).Radius(t.Radius).
-					FocusRing(false).Tooltip("Restore every otty default")
-				rb.Children(func() {
-					ui.Row(c).Gap(4).Children(func() {
-						ui.Image(c, lucide.RotateCcw()).Size(12, 12)
-						ui.Text(c, "Reset to Default").FontSize(12).TextColor(t.TextMuted)
-					})
-				})
-				if rb.Clicked() {
-					sw.s.KeybindOverrides = map[string]string{}
-					sw.rebind()
-				}
-			}
+	ui.Row(c).FillWidth().Gap(8).Children(func() {
+		ui.Box(c).Grow(1).MinWidth(0).Children(func() {
+			searchfield.SearchField(c, searchfield.Props{Value: &sw.keys.search})
 		})
-		if sw.keys.recording != "" {
-			ui.Row(c).Gap(6).Children(func() {
-				ui.Image(c, lucide.Keyboard()).Size(13, 13)
-				ui.Text(c, "Press a shortcut…  (Esc to cancel)").FontSize(11).TextColor(t.Accent)
+		if len(sw.s.KeybindOverrides) > 0 {
+			rb := ui.ButtonBase(c.Key("kb-reset-all")).Padding(4, 10).Radius(t.Radius).
+				FocusRing(false).Tooltip("Restore every otty default")
+			rb.Children(func() {
+				ui.Row(c).Gap(4).Children(func() {
+					ui.Image(c, lucide.RotateCcw()).Size(12, 12)
+					ui.Text(c, "Reset to Default").FontSize(12).TextColor(t.TextMuted)
+				})
 			})
+			if rb.Clicked() {
+				sw.s.KeybindOverrides = map[string]string{}
+				sw.rebind()
+			}
 		}
 	})
+	if sw.keys.recording != "" {
+		ui.Row(c).Gap(6).Children(func() {
+			ui.Image(c, lucide.Keyboard()).Size(13, 13)
+			ui.Text(c, "Press a shortcut…  (Esc to cancel)").FontSize(11).TextColor(t.Accent)
+		})
+	}
 	sw.keybindList(c)
 }
 
@@ -317,7 +315,7 @@ func (sw *settingsWindow) recordCombo(combo string) {
 // is a window; the tests build the page without one.
 func (sw *settingsWindow) rebind() {
 	if sw.a != nil {
-		sw.rebind()
+		sw.a.applyKeybinds()
 	}
 }
 

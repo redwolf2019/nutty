@@ -9,6 +9,7 @@ import (
 
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
+	"github.com/oneo-me/onevra/source/components"
 	"github.com/smallnest/uix/components/tree"
 )
 
@@ -312,7 +313,10 @@ func TestSettingsSnapshot(t *testing.T) {
 	}
 	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
 	for _, cat := range settingsCategories {
-		sw := &settingsWindow{a: a, s: a.settings, last: *a.settings, page: cat.id}
+		sw := &settingsWindow{
+			a: a, s: a.settings, last: *a.settings,
+			state: components.SettingsState{Category: cat.id},
+		}
 		tt := ui.NewTester(sw.view, 760, 540)
 		tt.Frame()
 		f, err := os.Create("/tmp/nutty-settings-" + cat.id + ".png")
