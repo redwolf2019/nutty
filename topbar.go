@@ -87,7 +87,7 @@ func (a *app) titleText() string {
 // toolbar.
 func (a *app) infoToolbar(c *ui.Context) {
 	t := c.Theme()
-	box := ui.Box(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
+	box := ui.Box(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border)
 	if box.Hovered() {
 		box.Children(func() {
@@ -110,9 +110,17 @@ func (a *app) infoToolbar(c *ui.Context) {
 						a.setInfoTab(infoTabInfo)
 					}
 				}
-				a.tabButton(c, "toolbar-outline", lucide.List(), "Outline", infoTabOutline)
-				a.tabButton(c, "toolbar-git", lucide.GitBranch(), "Git", infoTabGit)
-				a.tabButton(c, "toolbar-files", lucide.Folder(), "Files", infoTabFiles)
+				// The sections the View page's Details Panel settings hide
+				// do not draw their button, as otty drops them.
+				if a.detailsViewEnabled("outline") {
+					a.tabButton(c, "toolbar-outline", lucide.List(), "Outline", infoTabOutline)
+				}
+				if a.detailsViewEnabled("git") {
+					a.tabButton(c, "toolbar-git", lucide.GitBranch(), "Git", infoTabGit)
+				}
+				if a.detailsViewEnabled("files") {
+					a.tabButton(c, "toolbar-files", lucide.Folder(), "Files", infoTabFiles)
+				}
 				ui.Box(c).Grow(1)
 				a.iconButton(c, "toolbar-panel", lucide.PanelRightClose(), "Toggle panel", func() {
 					a.toggleInfo()

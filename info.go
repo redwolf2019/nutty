@@ -64,7 +64,7 @@ type gitChange struct {
 // Git tab the repository's status; the Files tab the working tree.
 func (a *app) infoView(c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
+	ui.Column(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
 			ui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
 				ui.Column(c).FillWidth().Padding(14, 18).Gap(20).Children(func() {
@@ -92,9 +92,41 @@ func (a *app) setInfoTab(t infoTab) {
 	a.setPanel(panelInfo)
 }
 
-// loadInfoTab loads the open section's data. The Info section rescans the
-// ports each time it opens; the others load once and keep their state.
+// infoTabID is the details view id of an info tab, the id the settings'
+// Details Views list holds.
+func infoTabID(t infoTab) string {
+	switch t {
+	case infoTabOutline:
+		return "outline"
+	case infoTabGit:
+		return "git"
+	case infoTabFiles:
+		return "files"
+	}
+	return "info"
+}
+
+// detailsViewEnabled reports whether a details view shows, per the View
+// page's Details Panel settings; an id without a setting shows.
+func (a *app) detailsViewEnabled(id string) bool {
+	if a.settings == nil {
+		return true
+	}
+	for _, v := range a.settings.DetailsViews {
+		if v.ID == id {
+			return v.Enabled
+		}
+	}
+	return true
+}
+
+// loadInfoTab loads the open section's data. A section the settings hide
+// falls back to Info. The Info section rescans the ports each time it
+// opens; the others load once and keep their state.
 func (a *app) loadInfoTab() {
+	if !a.detailsViewEnabled(infoTabID(a.info.tab)) {
+		a.info.tab = infoTabInfo
+	}
 	switch a.info.tab {
 	case infoTabInfo:
 		a.loadPorts()

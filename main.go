@@ -13,7 +13,7 @@ import (
 func main() {
 	mygo.App.WhenReady(func() {
 		registerFonts()
-		setAppMenu()
+		setAppMenu(loadSettings())
 		newWindow()
 	})
 	if err := mygo.App.Run(); err != nil {

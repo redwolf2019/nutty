@@ -73,7 +73,15 @@ func (a *app) newSession(dir string) *session {
 	p.term = a.newTerm(s, p)
 	s.root = &node{term: p}
 	s.panes = []*pane{p}
-	a.sessions = append(a.sessions, s)
+	// Auto and after-current open the new tab beside the active one, as
+	// otty's New Tab Position setting says; End appends it.
+	if (a.settings.NewTabPosition == "auto" || a.settings.NewTabPosition == "after-current") &&
+		a.active < len(a.sessions) {
+		a.sessions = append(a.sessions[:a.active+1],
+			append([]*session{s}, a.sessions[a.active+1:]...)...)
+	} else {
+		a.sessions = append(a.sessions, s)
+	}
 	a.activate(s)
 	return s
 }

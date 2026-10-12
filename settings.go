@@ -441,6 +441,9 @@ func (s *settings) normalize() {
 // sidebarWidth is the width of the tabs rail, from the settings.
 func (a *app) sidebarWidth() float32 { return float32(a.settings.SidebarWidth) }
 
+// detailsPanelWidth is the width of the right panel, from the settings.
+func (a *app) detailsPanelWidth() float32 { return float32(a.settings.DetailsPanelWidth) }
+
 // cursorStyle maps the setting to the terminal's cursor.
 func (a *app) cursorStyle() terminal.CursorStyle {
 	switch a.settings.CursorStyle {

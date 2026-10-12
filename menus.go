@@ -5,17 +5,25 @@ import (
 )
 
 // setAppMenu builds the application menu, mirroring otty's layout. The
-// handlers dispatch to the focused window's app, so each window keeps its
-// own sessions. Edit roles go to the focused control, so a terminal gets
-// its copy and paste.
-func setAppMenu() {
+// accelerators come from the key bindings: a recorded override, else
+// otty's default, so a change on the Key Bindings page rebuilds the menu
+// (see applyKeybinds). The handlers dispatch to the focused window's app,
+// so each window keeps its own sessions. Edit roles go to the focused
+// control, so a terminal gets its copy and paste.
+func setAppMenu(s *settings) {
+	acc := func(action string) string {
+		if t, ok := s.actionTrigger(action); ok {
+			return acceleratorOf(t)
+		}
+		return ""
+	}
 	menu := mygo.NewMenu([]*mygo.MenuItem{
 		{
 			Label: "Nutty",
 			Submenu: []*mygo.MenuItem{
 				{Role: mygo.RoleAbout},
 				mygo.Separator(),
-				{Label: "Settings…", Accelerator: "CmdOrCtrl+,", Click: act(func(a *app) { a.openSettings() })},
+				{Label: "Settings…", Accelerator: acc("open_settings"), Click: act(func(a *app) { a.openSettings() })},
 				mygo.Separator(),
 				{Role: mygo.RoleServices},
 				mygo.Separator(),
@@ -29,14 +37,14 @@ func setAppMenu() {
 		{
 			Label: "File",
 			Submenu: []*mygo.MenuItem{
-				{Label: "New Window", Accelerator: "CmdOrCtrl+Shift+N", Click: func(_ *mygo.MenuItem, _ *mygo.Window) { newWindow() }},
-				{Label: "New Tab", Accelerator: "CmdOrCtrl+T", Click: act(func(a *app) { a.newTab() })},
-				{Label: "Duplicate Tab", Accelerator: "CmdOrCtrl+Shift+T", Click: act(func(a *app) { a.duplicateTab() })},
+				{Label: "New Window", Accelerator: acc("new_window"), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { newWindow() }},
+				{Label: "New Tab", Accelerator: acc("new_tab"), Click: act(func(a *app) { a.newTab() })},
+				{Label: "Duplicate Tab", Accelerator: acc("duplicate_tab"), Click: act(func(a *app) { a.duplicateTab() })},
 				mygo.Separator(),
-				{Label: "Close Tab", Accelerator: "CmdOrCtrl+W", Click: act(func(a *app) { a.closeTab() })},
+				{Label: "Close Tab", Accelerator: acc("close_tab"), Click: act(func(a *app) { a.closeTab() })},
 				{Role: mygo.RoleClose},
 				mygo.Separator(),
-				{Label: "Reveal in Finder", Accelerator: "CmdOrCtrl+Shift+R", Click: act(func(a *app) { a.revealInFinder() })},
+				{Label: "Reveal in Finder", Click: act(func(a *app) { a.revealInFinder() })},
 			},
 		},
 		{
@@ -54,13 +62,13 @@ func setAppMenu() {
 		{
 			Label: "View",
 			Submenu: []*mygo.MenuItem{
-				{Label: "Toggle Sidebar", Accelerator: "CmdOrCtrl+Shift+L", Click: act(func(a *app) { a.toggleSidebar() })},
-				{Label: "Toggle Agent Chat", Accelerator: "CmdOrCtrl+Shift+A", Click: act(func(a *app) { a.toggleChat() })},
-				{Label: "Command Palette", Accelerator: "CmdOrCtrl+Shift+P", Click: act(func(a *app) { a.paletteOpen = true })},
+				{Label: "Toggle Sidebar", Accelerator: acc("toggle_tabs_panel"), Click: act(func(a *app) { a.toggleSidebar() })},
+				{Label: "Toggle Agent Chat", Accelerator: acc("open_agent"), Click: act(func(a *app) { a.toggleChat() })},
+				{Label: "Command Palette", Accelerator: acc("command_palette"), Click: act(func(a *app) { a.paletteOpen = true })},
 				mygo.Separator(),
-				{Label: "Increase Font Size", Accelerator: "CmdOrCtrl+=", Click: act(func(a *app) { a.zoomFont(1) })},
-				{Label: "Decrease Font Size", Accelerator: "CmdOrCtrl+-", Click: act(func(a *app) { a.zoomFont(-1) })},
-				{Label: "Reset Font Size", Accelerator: "CmdOrCtrl+0", Click: act(func(a *app) { a.resetFont() })},
+				{Label: "Increase Font Size", Accelerator: acc("increase_font_size"), Click: act(func(a *app) { a.zoomFont(1) })},
+				{Label: "Decrease Font Size", Accelerator: acc("decrease_font_size"), Click: act(func(a *app) { a.zoomFont(-1) })},
+				{Label: "Reset Font Size", Accelerator: acc("reset_font_size"), Click: act(func(a *app) { a.resetFont() })},
 				mygo.Separator(),
 				{Role: mygo.RoleToggleFullScreen},
 			},
@@ -68,12 +76,12 @@ func setAppMenu() {
 		{
 			Label: "Terminal",
 			Submenu: []*mygo.MenuItem{
-				{Label: "Rename Tab…", Accelerator: "CmdOrCtrl+R", Click: act(func(a *app) { a.beginRename() })},
-				{Label: "Split Right", Accelerator: "CmdOrCtrl+D", Click: act(func(a *app) { a.splitRight() })},
-				{Label: "Split Down", Accelerator: "CmdOrCtrl+Shift+D", Click: act(func(a *app) { a.splitDown() })},
+				{Label: "Rename Tab…", Accelerator: acc("rename_tab"), Click: act(func(a *app) { a.beginRename() })},
+				{Label: "Split Right", Accelerator: acc("split_right"), Click: act(func(a *app) { a.splitRight() })},
+				{Label: "Split Down", Accelerator: acc("split_down"), Click: act(func(a *app) { a.splitDown() })},
 				mygo.Separator(),
-				{Label: "Clear Screen", Accelerator: "CmdOrCtrl+Shift+K", Click: act(func(a *app) { a.clearScreen() })},
-				{Label: "Copy Path", Accelerator: "CmdOrCtrl+Shift+C", Click: act(func(a *app) { a.copyPath() })},
+				{Label: "Clear Screen", Accelerator: acc("clear_screen"), Click: act(func(a *app) { a.clearScreen() })},
+				{Label: "Copy Path", Accelerator: acc("copy_path"), Click: act(func(a *app) { a.copyPath() })},
 			},
 		},
 		{
@@ -82,10 +90,10 @@ func setAppMenu() {
 				{Role: mygo.RoleMinimize},
 				{Role: mygo.RoleZoom},
 				mygo.Separator(),
-				{Label: "Next Tab", Accelerator: "CmdOrCtrl+Shift+]", Click: act(func(a *app) { a.nextTab() })},
-				{Label: "Previous Tab", Accelerator: "CmdOrCtrl+Shift+[", Click: act(func(a *app) { a.prevTab() })},
-				{Label: "Focus Next Pane", Accelerator: "CmdOrCtrl+]", Click: act(func(a *app) { a.focusNextPane() })},
-				{Label: "Focus Previous Pane", Accelerator: "CmdOrCtrl+[", Click: act(func(a *app) { a.focusPrevPane() })},
+				{Label: "Next Tab", Accelerator: acc("next_tab"), Click: act(func(a *app) { a.nextTab() })},
+				{Label: "Previous Tab", Accelerator: acc("previous_tab"), Click: act(func(a *app) { a.prevTab() })},
+				{Label: "Focus Next Pane", Accelerator: acc("focus_pane_next"), Click: act(func(a *app) { a.focusNextPane() })},
+				{Label: "Focus Previous Pane", Accelerator: acc("focus_pane_previous"), Click: act(func(a *app) { a.focusPrevPane() })},
 			},
 		},
 		{Role: mygo.RoleHelp},

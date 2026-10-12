@@ -182,6 +182,73 @@ func TestSettingsRegistry(t *testing.T) {
 	}
 }
 
+// TestKeybindRows checks the key binding list: every default binding is
+// there with its trigger, and a recorded override wins over the default.
+func TestKeybindRows(t *testing.T) {
+	s := defaultSettings()
+	sw := &settingsWindow{s: s}
+	rows := sw.keybindRows()
+	byAction := map[string]keybindRow{}
+	for _, r := range rows {
+		byAction[r.action] = r
+	}
+	if r, ok := byAction["goto_tab:1"]; !ok || r.trigger != "cmd+1" {
+		t.Fatalf("goto_tab:1 row = %+v, want cmd+1", r)
+	}
+	if r, ok := byAction["new_tab"]; !ok || r.trigger != "cmd+t" {
+		t.Fatalf("new_tab row = %+v, want cmd+t", r)
+	}
+	// An override replaces the trigger and marks the row.
+	s.KeybindOverrides = map[string]string{"cmd+alt+t": "new_tab"}
+	sw = &settingsWindow{s: s}
+	for _, r := range sw.keybindRows() {
+		if r.action == "new_tab" {
+			if r.trigger != "cmd+alt+t" || !r.overridden {
+				t.Fatalf("overridden new_tab = %+v", r)
+			}
+		}
+	}
+}
+
+// TestKeybindRecord checks that recording a combo binds it, drops the
+// action's old binding and any other action on the combo, and that
+// conflicts are detected.
+func TestKeybindRecord(t *testing.T) {
+	s := defaultSettings()
+	s.KeybindOverrides = map[string]string{"cmd+d": "new_tab"}
+	sw := &settingsWindow{s: s}
+	sw.keys.recording = "split_right"
+	sw.recordCombo("cmd+d")
+	if got := s.KeybindOverrides["cmd+d"]; got != "split_right" {
+		t.Fatalf("cmd+d = %q, want split_right", got)
+	}
+	if tr, ok := s.actionTrigger("new_tab"); ok {
+		t.Fatalf("new_tab still bound to %q, want unbound", tr)
+	}
+	if a, _ := s.triggerAction("cmd+shift+d"); a != "split_down" {
+		t.Fatalf("default split_down = %q, want split_down", a)
+	}
+}
+
+// TestAccelerator checks that otty triggers convert to menu accelerators.
+func TestAccelerator(t *testing.T) {
+	cases := map[string]string{
+		"cmd+comma":             "CmdOrCtrl+,",
+		"cmd+shift+l":           "CmdOrCtrl+Shift+L",
+		"cmd+opt+d":             "CmdOrCtrl+Option+D",
+		"cmd+shift+right_bracket": "CmdOrCtrl+Shift+]",
+		"cmd+ctrl+down":         "CmdOrCtrl+Ctrl+Down",
+		"cmd+equal":             "CmdOrCtrl+=",
+		"cmd+0":                 "CmdOrCtrl+0",
+		"cmd+t":                 "CmdOrCtrl+T",
+	}
+	for trigger, want := range cases {
+		if got := acceleratorOf(trigger); got != want {
+			t.Errorf("acceleratorOf(%q) = %q, want %q", trigger, got, want)
+		}
+	}
+}
+
 // TestSettingsPagesRender checks that every category draws its page, with
 // the settings the page is known for. Long pages render taller than the
 // window, so each one is drawn in a viewport tall enough for its content.
@@ -199,6 +266,7 @@ func TestSettingsPagesRender(t *testing.T) {
 		"data":        {"Not available in this build"},
 		"account":     {"Not signed in"},
 		"remote":      {"Not available in this build."},
+		"key_bindings": {"New Tab", "cmd+t", "Tab 1", "cmd+1"},
 	}
 	for _, cat := range settingsCategories {
 		sw := &settingsWindow{a: a, s: a.settings, last: *a.settings, page: cat.id}

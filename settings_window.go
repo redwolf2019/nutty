@@ -29,6 +29,7 @@ type settingsWindow struct {
 	page  string   // the chosen category
 	wells colorWells
 	lists map[string]*string // def key -> list editor buffer
+	keys  keybindPage
 }
 
 // colorWells hold the buffers of the color pickers, one per color
@@ -322,17 +323,45 @@ func (sw *settingsWindow) wellState(d settingDef) *colorWellState {
 }
 
 // pageView is the View category: the registry's tab and badge settings,
-// plus the details panel's views, each with its own enable switch.
+// plus the details panel's views, each with its own enable switch and
+// the arrows to reorder it.
 func (sw *settingsWindow) pageView(c *ui.Context) {
 	sw.pageFromGroups(c, "view")
 	sw.group(c, "Details Panel", func() {
-		sw.hint(c, "The tabs of the panel on the right. Disable one to hide it.")
+		sw.hint(c, "The tabs of the panel on the right. Disable one to hide it; the arrows reorder them.")
 		for i := range sw.s.DetailsViews {
 			i := i
 			v := &sw.s.DetailsViews[i]
-			uixswitch.Switch(c, uixswitch.Props{On: &v.Enabled, Label: v.Title})
+			ui.Row(c).FillWidth().Gap(8).Children(func() {
+				uixswitch.Switch(c, uixswitch.Props{On: &v.Enabled, Label: v.Title})
+				ui.Box(c).Grow(1)
+				sw.moveButton(c, "up-"+v.ID, lucide.ChevronUp(), i > 0, func() { sw.moveView(i, -1) })
+				sw.moveButton(c, "down-"+v.ID, lucide.ChevronDown(), i < len(sw.s.DetailsViews)-1, func() { sw.moveView(i, 1) })
+			})
 		}
 	})
+}
+
+// moveButton is a small arrow that calls onClick, dimmed when not enabled.
+func (sw *settingsWindow) moveButton(c *ui.Context, key string, icon *ui.SVG, enabled bool, onClick func()) {
+	t := c.Theme()
+	b := ui.ButtonBase(c.Key(key)).Padding(4, 4).Radius(t.Radius).FocusRing(false)
+	if !enabled {
+		b.Disabled(true)
+	}
+	b.Children(func() { ui.Image(c, icon).Size(14, 14) })
+	if b.Clicked() {
+		onClick()
+	}
+}
+
+// moveView shifts one details view in the list, clamping at the ends.
+func (sw *settingsWindow) moveView(i, delta int) {
+	v := sw.s.DetailsViews
+	if j := i + delta; i < 0 || j < 0 || i >= len(v) || j >= len(v) {
+		return
+	}
+	v[i], v[i+delta] = v[i+delta], v[i]
 }
 
 // pageAppearance is the Appearance category: the registry's theme, font,
@@ -397,12 +426,6 @@ func (sw *settingsWindow) paletteGrid(c *ui.Context) {
 // pageProfiles is the Profiles category; the editor lands in a later pass.
 func (sw *settingsWindow) pageProfiles(c *ui.Context) {
 	sw.pageUnavailable(c, "Profiles", "Profiles come next; the default profile starts every new pane.")
-}
-
-// pageKeyBindings is the Key Bindings category; the recorder lands in a
-// later pass.
-func (sw *settingsWindow) pageKeyBindings(c *ui.Context) {
-	sw.pageUnavailable(c, "Key Bindings", "The key binding recorder comes next.")
 }
 
 // pageAdvanced is the Advanced category; the All Settings list lands in a
