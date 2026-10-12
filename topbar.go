@@ -46,18 +46,42 @@ func (a *app) topstrip(c *ui.Context) {
 			})
 		})
 
-		// The right surface column: its toolbar when a panel is open, and
-		// the bare column otherwise — the info panel's toggle floats at the
-		// corner of the middle panel then.
-		switch a.panel {
-		case panelInfo:
+		// The Tabs layouts keep the tab bar's toggle and the info panel's
+		// toggle at the strip's right end, at the title's height, as otty
+		// shows them in the title strip. The Sidebar layout shows the right
+		// panel's toolbar when a panel is open, and the bare column
+		// otherwise — the info panel's toggle floats at the corner of the
+		// middle panel then.
+		switch {
+		case a.settings.WindowLayout != "sidebar-left":
+			a.stripControls(c)
+		case a.panel == panelInfo:
 			a.infoToolbar(c)
-		case panelChat:
+		case a.panel == panelChat:
 			a.chatToolbar(c)
 		default:
 			ui.Box(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
 				BorderWidth(0, 0, 0, 1).BorderColor(t.Border)
 		}
+	})
+}
+
+// stripControls is the right end of the Tabs layouts' strip: the toggle
+// that hides the tab bar, and — while no panel is open — the toggle that
+// opens the info panel, both at the title's height. An open panel draws
+// its own toggle in its toolbar at the same height.
+func (a *app) stripControls(c *ui.Context) {
+	ui.Box(c).Shrink(0).FillHeight().Children(func() {
+		ui.Row(c).FillHeight().Height(a.stripBar(c)).Padding(0, 10).Gap(2).Children(func() {
+			a.iconButton(c, "tabbar-toggle", lucide.PanelLeftClose(), "Toggle tabs", func() {
+				a.toggleSidebar()
+			})
+			if a.panel == panelNone {
+				a.iconButton(c, "strip-panel", lucide.PanelRightOpen(), "Info panel", func() {
+					a.toggleInfo()
+				})
+			}
+		})
 	})
 }
 
@@ -91,43 +115,52 @@ func (a *app) infoToolbar(c *ui.Context) {
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border)
 	if box.Hovered() {
 		box.Children(func() {
-			ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
-				pill := ui.ButtonBase(c.Key("toolbar-info")).Padding(5, 9).
-					Radius(999).FocusRing(false).Tooltip("Info")
-				if a.info.tab == infoTabInfo {
-					pill.Background(t.SurfaceHover)
-				}
-				pill.Children(func() {
-					ui.Row(c).Gap(5).Children(func() {
-						ui.Image(c, lucide.Info()).Size(14, 14)
-						ui.Text(c, "Info").FontSize(12).TextColor(t.Text)
-					})
-				})
-				if pill.Clicked() {
-					if a.info.tab == infoTabInfo {
-						a.toggleInfo()
-					} else {
-						a.setInfoTab(infoTabInfo)
-					}
-				}
-				// The sections the View page's Details Panel settings hide
-				// do not draw their button, as otty drops them.
-				if a.detailsViewEnabled("outline") {
-					a.tabButton(c, "toolbar-outline", lucide.List(), "Outline", infoTabOutline)
-				}
-				if a.detailsViewEnabled("git") {
-					a.tabButton(c, "toolbar-git", lucide.GitBranch(), "Git", infoTabGit)
-				}
-				if a.detailsViewEnabled("files") {
-					a.tabButton(c, "toolbar-files", lucide.Folder(), "Files", infoTabFiles)
-				}
-				ui.Box(c).Grow(1)
-				a.iconButton(c, "toolbar-panel", lucide.PanelRightClose(), "Toggle panel", func() {
-					a.toggleInfo()
-				})
-			})
+			a.infoToolbarRow(c)
 		})
 	}
+}
+
+// infoToolbarRow is the info panel's mode switch: the "Info" pill, the
+// icons for the outline, git and files sections and the panel toggle, at
+// the strip's height. The Sidebar layout draws it in the top strip; the
+// Tabs layouts draw it at the top of the panel's full-height column.
+func (a *app) infoToolbarRow(c *ui.Context) {
+	t := c.Theme()
+	ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
+		pill := ui.ButtonBase(c.Key("toolbar-info")).Padding(5, 9).
+			Radius(999).FocusRing(false).Tooltip("Info")
+		if a.info.tab == infoTabInfo {
+			pill.Background(t.SurfaceHover)
+		}
+		pill.Children(func() {
+			ui.Row(c).Gap(5).Children(func() {
+				ui.Image(c, lucide.Info()).Size(14, 14)
+				ui.Text(c, "Info").FontSize(12).TextColor(t.Text)
+			})
+		})
+		if pill.Clicked() {
+			if a.info.tab == infoTabInfo {
+				a.toggleInfo()
+			} else {
+				a.setInfoTab(infoTabInfo)
+			}
+		}
+		// The sections the View page's Details Panel settings hide
+		// do not draw their button, as otty drops them.
+		if a.detailsViewEnabled("outline") {
+			a.tabButton(c, "toolbar-outline", lucide.List(), "Outline", infoTabOutline)
+		}
+		if a.detailsViewEnabled("git") {
+			a.tabButton(c, "toolbar-git", lucide.GitBranch(), "Git", infoTabGit)
+		}
+		if a.detailsViewEnabled("files") {
+			a.tabButton(c, "toolbar-files", lucide.Folder(), "Files", infoTabFiles)
+		}
+		ui.Box(c).Grow(1)
+		a.iconButton(c, "toolbar-panel", lucide.PanelRightClose(), "Toggle panel", func() {
+			a.toggleInfo()
+		})
+	})
 }
 
 // tabButton is a toolbar icon that opens one section of the info panel,
@@ -156,21 +189,30 @@ func (a *app) chatToolbar(c *ui.Context) {
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border)
 	if box.Hovered() {
 		box.Children(func() {
-			ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 14).Gap(8).Children(func() {
-				nutTile(c, 18)
-				ui.Text(c, "Agent").Bold()
-				ui.Box(c).Grow(1)
-				cl := ui.Button(c, "×").Padding(0, 5).FocusRing(false)
-				cl.TextColor(t.TextMuted)
-				if cl.Hovered() {
-					cl.TextColor(t.Text)
-				}
-				if cl.Clicked() {
-					a.setPanel(panelNone)
-				}
-			})
+			a.chatToolbarRow(c)
 		})
 	}
+}
+
+// chatToolbarRow is the chat panel's header: the nut, the "Agent" title
+// and the close button, at the strip's height. The Sidebar layout draws
+// it in the top strip; the Tabs layouts at the top of the panel's
+// full-height column.
+func (a *app) chatToolbarRow(c *ui.Context) {
+	t := c.Theme()
+	ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 14).Gap(8).Children(func() {
+		nutTile(c, 18)
+		ui.Text(c, "Agent").Bold()
+		ui.Box(c).Grow(1)
+		cl := ui.Button(c, "×").Padding(0, 5).FocusRing(false)
+		cl.TextColor(t.TextMuted)
+		if cl.Hovered() {
+			cl.TextColor(t.Text)
+		}
+		if cl.Clicked() {
+			a.setPanel(panelNone)
+		}
+	})
 }
 
 // iconButton is a bare icon button of a toolbar.

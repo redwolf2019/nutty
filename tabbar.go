@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/egoist/mygo/ui"
-	"github.com/oneo-me/onevra/source/icons/lucide"
 )
 
 // tabBarView is the horizontal tab bar of the Tabs Top and Tabs Bottom
@@ -32,14 +31,6 @@ func (a *app) tabBarView(c *ui.Context) {
 				}
 			})
 		})
-		tb := ui.ButtonBase(c.Key("tabbar-toggle")).Padding(0, 8).
-			Radius(t.Radius).FocusRing(false).Tooltip("Toggle tabs")
-		tb.Children(func() {
-			ui.Image(c, lucide.PanelLeftClose()).Size(14, 14)
-		})
-		if tb.Clicked() {
-			a.toggleSidebar()
-		}
 	})
 	// A close clicked while building must not shift the loop; close after
 	// the bar is built.

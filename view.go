@@ -13,16 +13,34 @@ import (
 // command palette overlays it all.
 func (a *app) view(c *ui.Context) {
 	c.SetTheme(ottyTheme(c.Theme().Dark))
+	if a.settings.WindowLayout == "sidebar-left" {
+		a.viewSidebar(c)
+	} else {
+		a.viewTabs(c)
+	}
+
+	// The palette opens with Cmd+K as well as the menu's Cmd+Shift+P.
+	if c.Shortcut(ui.Cmd, ui.KeyK) {
+		a.paletteOpen = true
+	}
+
+	a.renameDialog(c)
+	a.confirmDialog(c)
+	command.Command(c, command.Props{
+		Open:  &a.paletteOpen,
+		State: &a.palette,
+		Items: a.paletteItems(),
+	})
+}
+
+// viewSidebar is the Sidebar layout: the strip over the whole window, then
+// the rail of sessions on the left, the panes in the middle and the open
+// info or chat panel on the right, all below the strip.
+func (a *app) viewSidebar(c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		a.topstrip(c)
-		// The Tabs Top layout puts the tab bar under the strip; the
-		// Sidebar layout keeps the rail on the left, and Tabs Bottom puts
-		// the bar under everything, as otty's Window Layout setting says.
-		if a.sideOpen && a.settings.WindowLayout == "tabs-top" {
-			a.tabBarView(c)
-		}
 		ui.Row(c).Grow(1).MinHeight(0).Children(func() {
-			if a.sideOpen && a.settings.WindowLayout == "sidebar-left" {
+			if a.sideOpen {
 				a.railView(c)
 			}
 			ui.Box(c).Grow(1).MinWidth(0).FillHeight().Clip().Children(func() {
@@ -36,22 +54,35 @@ func (a *app) view(c *ui.Context) {
 				a.chatView(c)
 			}
 		})
-		if a.sideOpen && a.settings.WindowLayout == "tabs-bottom" {
-			a.tabBarView(c)
-		}
 	})
+}
 
-	// The palette opens with Cmd+K as well as the menu's Cmd+Shift+P.
-	if c.Shortcut(ui.Cmd, ui.KeyK) {
-		a.paletteOpen = true
-	}
-
-	a.renameDialog(c)
-	a.confirmDialog(c)
-	command.Command(c, command.Props{
-		Open:  &a.paletteOpen,
-		State: &a.palette,
-		Items: a.paletteItems(),
+// viewTabs is the Tabs Top and Tabs Bottom layouts: the strip with the tab
+// bar's and the info panel's toggles at the title's height, the horizontal
+// tab bar above or below the panes, and the open panel as a full-height
+// column reaching the top of the window, as otty draws the layouts.
+func (a *app) viewTabs(c *ui.Context) {
+	// A Row centers its children vertically; the columns must fill the
+	// window's height, so they stretch across it.
+	ui.Row(c).Fill().AlignItems(ui.Stretch).Children(func() {
+		ui.Column(c).Grow(1).MinWidth(0).Children(func() {
+			a.topstrip(c)
+			if a.sideOpen && a.settings.WindowLayout == "tabs-top" {
+				a.tabBarView(c)
+			}
+			ui.Box(c).FillWidth().Grow(1).MinHeight(0).Clip().Children(func() {
+				a.contentView(c)
+			})
+			if a.sideOpen && a.settings.WindowLayout == "tabs-bottom" {
+				a.tabBarView(c)
+			}
+		})
+		switch a.panel {
+		case panelInfo:
+			a.infoColumn(c)
+		case panelChat:
+			a.chatColumn(c)
+		}
 	})
 }
 

@@ -66,23 +66,43 @@ func (a *app) infoView(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
-			ui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
-				ui.Column(c).FillWidth().Padding(14, 18).Gap(20).Children(func() {
-					switch a.info.tab {
-					case infoTabOutline:
-						a.infoOutlineView(c)
-					case infoTabGit:
-						a.infoGitView(c)
-					case infoTabFiles:
-						a.infoFilesView(c)
-					default:
-						a.infoDirectory(c)
-						a.infoProcess(c)
-						a.infoPorts(c)
-					}
-				})
-			})
+			a.infoBody(c)
 		})
+}
+
+// infoColumn is the info panel of the Tabs layouts: a full-height column
+// that reaches the top of the window, with the mode switch at the strip's
+// height and the sections below, as otty draws the panel beside the
+// horizontal tab bar.
+func (a *app) infoColumn(c *ui.Context) {
+	t := c.Theme()
+	ui.Column(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
+		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
+			ui.Box(c).FillWidth().Shrink(0).Height(a.stripBar(c)).Children(func() {
+				a.infoToolbarRow(c)
+			})
+			a.infoBody(c)
+		})
+}
+
+// infoBody is the panel's sections, the ones of the open tab.
+func (a *app) infoBody(c *ui.Context) {
+	ui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
+		ui.Column(c).FillWidth().Padding(14, 18).Gap(20).Children(func() {
+			switch a.info.tab {
+			case infoTabOutline:
+				a.infoOutlineView(c)
+			case infoTabGit:
+				a.infoGitView(c)
+			case infoTabFiles:
+				a.infoFilesView(c)
+			default:
+				a.infoDirectory(c)
+				a.infoProcess(c)
+				a.infoPorts(c)
+			}
+		})
+	})
 }
 
 // setInfoTab opens the info panel on a section; the section's data loads
