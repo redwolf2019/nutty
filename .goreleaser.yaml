@@ -10,6 +10,12 @@ project_name: Nutty
 builds:
   - skip: true
 
+# The DMG only joins the artifacts at publish time, after the checksum
+# pipe has run, so list it here as well for a checksums.txt.
+checksum:
+  extra_files:
+    - glob: ./out/darwin-universal/Nutty*.dmg
+
 release:
   draft: false
   extra_files:
