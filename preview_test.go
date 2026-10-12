@@ -327,3 +327,54 @@ func TestSettingsSnapshot(t *testing.T) {
 		t.Log("wrote /tmp/nutty-settings-" + cat.id + ".png")
 	}
 }
+
+// TestFilesPanel renders the window with the Files panel open on the right,
+// its tree the working directory's real files:
+// NUTTY_SNAPSHOT=1 go test -run TestFilesPanel.
+func TestFilesPanel(t *testing.T) {
+	if os.Getenv("NUTTY_SNAPSHOT") == "" {
+		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
+	}
+	registerFonts()
+	lt, dt := ottyTermTheme(false), ottyTermTheme(true)
+	term, err := terminal.New(terminal.Options{
+		Conn:      &scriptConn{data: []byte(previewScript)},
+		Font:      (&app{settings: defaultSettings()}).termFont(),
+		Theme:     lt,
+		DarkTheme: dt,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &pane{term: term}
+	s := &session{
+		id: 1, title: "nutty", dir: "/Users/smallnest/ai/nutty",
+		started: time.Now().Add(-73 * time.Second),
+		root:    &node{term: p},
+		panes:   []*pane{p},
+	}
+	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+	a.sessions = []*session{s}
+	a.active = 0
+	a.activePane = p
+	a.sel = sessionID(1)
+	nodes := 0
+	a.info = infoState{
+		tab:       infoTabFiles,
+		filesDone: true,
+		files:     buildFileTree(s.dir, 0, &nodes),
+	}
+	a.panel = panelInfo
+	tt := ui.NewTester(a.view, 1280, 780)
+	tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})
+	tt.Frame()
+	f, err := os.Create("/tmp/nutty-files.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := png.Encode(f, tt.Image()); err != nil {
+		t.Fatal(err)
+	}
+	t.Log("wrote /tmp/nutty-files.png")
+}
