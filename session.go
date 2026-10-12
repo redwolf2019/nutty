@@ -133,23 +133,16 @@ func (a *app) renderNode(c *ui.Context, n *node) {
 	a.renderPane(c, n.term)
 }
 
-// renderPane draws one terminal, with an accent ring when it has the
-// focus. The ring is painted, not a border, so it changes nothing of the
-// layout.
+// renderPane draws one terminal, filling the pane with no ring around it —
+// otty draws none, and a ring around a terminal reads as a border.
 func (a *app) renderPane(c *ui.Context, p *pane) {
-	t := c.Theme()
 	on := p.handle.Focused(c)
 	if on {
 		a.activePane = p
 	}
-	w := ui.Box(c).Fill().Clip()
-	if on {
-		w.DrawOver(func(pp *ui.Painter, r ui.Rect) {
-			pp.Stroke(ui.Rect{X: r.X + 0.5, Y: r.Y + 0.5, W: r.W - 1, H: r.H - 1}, t.Accent, 0, 1)
-		})
-	}
-	w.Children(func() {
+	ui.Box(c).Fill().Clip().Children(func() {
 		if p.term == nil {
+			t := c.Theme()
 			ui.Column(c).Fill().Center().Gap(8).Children(func() {
 				ui.Text(c, "Terminal unavailable").TextColor(t.TextMuted)
 				ui.Text(c, "the terminal library could not be loaded").TextColor(t.TextMuted).FontSize(11)

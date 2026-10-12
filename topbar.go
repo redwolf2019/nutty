@@ -46,12 +46,15 @@ func (a *app) topstrip(c *ui.Context) {
 			})
 		})
 
-		// The right panel's toolbar, shown when one is open.
+		// The right surface column's toolbar, always there — the rail and
+		// panel toggles live in it whether or not a panel is open.
 		switch a.panel {
 		case panelInfo:
 			a.infoToolbar(c)
 		case panelChat:
 			a.chatToolbar(c)
+		default:
+			a.noneToolbar(c)
 		}
 	})
 }
@@ -83,6 +86,7 @@ func (a *app) infoToolbar(c *ui.Context) {
 	ui.Box(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
 			ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
+				a.iconButton(c, "toolbar-sidebar", a.sidebarIcon(), "Toggle sidebar", a.toggleSidebar)
 				pill := ui.ButtonBase(c.Key("toolbar-info")).Padding(5, 9).
 					Radius(999).FocusRing(false).Tooltip("Info")
 				if a.panel == panelInfo {
@@ -121,6 +125,7 @@ func (a *app) chatToolbar(c *ui.Context) {
 	ui.Box(c).Width(360).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
 			ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 14).Gap(8).Children(func() {
+				a.iconButton(c, "toolbar-sidebar", a.sidebarIcon(), "Toggle sidebar", a.toggleSidebar)
 				nutTile(c, 18)
 				ui.Text(c, "Agent").Bold()
 				ui.Box(c).Grow(1)
@@ -134,6 +139,32 @@ func (a *app) chatToolbar(c *ui.Context) {
 				}
 			})
 		})
+}
+
+// noneToolbar is the strip's right column when no panel is open: the rail
+// toggle on the left of the column and the info panel's toggle on the
+// right, so both sides of the window can be shown or hidden from one spot.
+func (a *app) noneToolbar(c *ui.Context) {
+	t := c.Theme()
+	ui.Box(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
+		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
+			ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
+				a.iconButton(c, "toolbar-sidebar", a.sidebarIcon(), "Toggle sidebar", a.toggleSidebar)
+				ui.Box(c).Grow(1)
+				a.iconButton(c, "toolbar-panel-open", lucide.PanelRightOpen(), "Info panel", func() {
+					a.setPanel(panelInfo)
+				})
+			})
+		})
+}
+
+// sidebarIcon is the rail's toggle, the icon telling which way it goes:
+// close it when the rail is open, open it when the rail is hidden.
+func (a *app) sidebarIcon() *ui.SVG {
+	if a.sideOpen {
+		return lucide.PanelLeftClose()
+	}
+	return lucide.PanelLeftOpen()
 }
 
 // iconButton is a bare icon button of a toolbar.

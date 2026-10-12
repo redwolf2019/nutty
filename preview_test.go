@@ -76,7 +76,11 @@ func TestSnapshot(t *testing.T) {
 	// The room the traffic lights take in a real window with the Y:7
 	// position: the strip's content lines up with them.
 	tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})
-	for panel, base := range map[panelMode]string{panelChat: "preview", panelInfo: "preview-info"} {
+	for panel, base := range map[panelMode]string{
+		panelChat: "preview",
+		panelInfo: "preview-info",
+		panelNone: "preview-none",
+	} {
 		a.panel = panel
 		for name, dark := range map[string]bool{base: false, base + "-dark": true} {
 			tt.SetDark(dark)
