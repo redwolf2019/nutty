@@ -1,0 +1,122 @@
+package main
+
+import (
+	"image/png"
+	"io"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/egoist/mygo/plugins/terminal"
+	"github.com/egoist/mygo/ui"
+)
+
+// scriptConn is a read-only terminal source for previews: the terminal
+// shows script as the program's output, and typed input goes nowhere.
+type scriptConn struct {
+	data []byte
+	off  int
+}
+
+func (c *scriptConn) Read(p []byte) (int, error) {
+	if c.off >= len(c.data) {
+		return 0, io.EOF
+	}
+	n := copy(p, c.data[c.off:])
+	c.off += n
+	return n, nil
+}
+func (c *scriptConn) Write(p []byte) (int, error) { return len(p), nil }
+func (c *scriptConn) Close() error                { return nil }
+
+const previewScript = "\x1b]0;preview — nutty\x07" +
+	"\x1b[38;5;245mLast login: Sat Oct 12 09:15:00 on ttys001\r\n" +
+	"\x1b[1;32mnutty\x1b[0m \x1b[1;34m~/ai/nutty\x1b[0m \x1b[1m❯\x1b[0m " +
+	"ls\r\n" +
+	"\x1b[0;38;5;250massets\x1b[0m   \x1b[1;34mresources\x1b[0m   " +
+	"\x1b[0;38;5;250mmain.go\x1b[0m   \x1b[1;34msession.go\x1b[0m\r\n" +
+	"\x1b[1;32mnutty\x1b[0m \x1b[1;34m~/ai/nutty\x1b[0m \x1b[1m❯\x1b[0m "
+
+// TestSnapshot renders the window to /tmp/nutty-preview.png for a visual
+// check without a window: NUTTY_SNAPSHOT=1 go test -run TestSnapshot.
+func TestSnapshot(t *testing.T) {
+	if os.Getenv("NUTTY_SNAPSHOT") == "" {
+		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
+	}
+	registerFonts()
+	lt, dt := ottyTermTheme(false), ottyTermTheme(true)
+	term, err := terminal.New(terminal.Options{
+		Conn:      &scriptConn{data: []byte(previewScript)},
+		Font:      (&app{settings: defaultSettings()}).termFont(),
+		Theme:     lt,
+		DarkTheme: dt,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &pane{term: term}
+	s := &session{
+		id: 1, title: "preview", dir: "/Users/smallnest/ai/nutty",
+		started: time.Now().Add(-73 * time.Second),
+		root:    &node{term: p},
+		panes:   []*pane{p},
+	}
+	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+	a.sessions = []*session{s}
+	a.active = 0
+	a.activePane = p
+	a.sel = sessionID(1)
+	a.panel = panelChat
+	a.info = infoState{ports: []string{"5173", "8000"}, portsDone: true}
+	a.chat.msgs = []chatMsg{
+		{user: true, text: "把会话渲染成 markdown 看看"},
+		{text: "## Markdown 渲染\n\n这是 **onevra** 渲染的列表：\n\n- 第一项\n- `行内代码`\n\n```go\nfmt.Println(\"hi\")\n```\n\n> 引用块"},
+	}
+	tt := ui.NewTester(a.view, 1280, 780)
+	// The room the traffic lights take in a real window with the Y:7
+	// position: the strip's content lines up with them.
+	tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})
+	for panel, base := range map[panelMode]string{panelChat: "preview", panelInfo: "preview-info"} {
+		a.panel = panel
+		for name, dark := range map[string]bool{base: false, base + "-dark": true} {
+			tt.SetDark(dark)
+			f, err := os.Create("/tmp/nutty-" + name + ".png")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := png.Encode(f, tt.Image()); err != nil {
+				f.Close()
+				t.Fatal(err)
+			}
+			f.Close()
+			t.Log("wrote /tmp/nutty-" + name + ".png")
+		}
+	}
+}
+
+// TestSettingsSnapshot renders the Settings window for a visual check.
+func TestSettingsSnapshot(t *testing.T) {
+	if os.Getenv("NUTTY_SNAPSHOT") == "" {
+		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
+	}
+	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+	sw := &settingsWindow{a: a, s: a.settings, last: *a.settings, page: "appearance"}
+	for _, dark := range []bool{false, true} {
+		tt := ui.NewTester(sw.view, 760, 540)
+		tt.SetDark(dark)
+		name := "settings"
+		if dark {
+			name = "settings-dark"
+		}
+		f, err := os.Create("/tmp/nutty-" + name + ".png")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := png.Encode(f, tt.Image()); err != nil {
+			f.Close()
+			t.Fatal(err)
+		}
+		f.Close()
+		t.Log("wrote /tmp/nutty-" + name + ".png")
+	}
+}

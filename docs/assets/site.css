@@ -1,0 +1,476 @@
+/* Nutty — the site, in the look of otty.sh: white paper, near-black ink,
+   hairline borders, pale chips, and a warm cream frame around the shots. */
+
+/* Reset, as the baseline asks: border-box everywhere, no min block size
+   surprise, keyword sizing allowed, wrapping and synthesis defaults. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+html {
+  interpolate-size: allow-keywords;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  font-feature-settings: "cv11", "ss01", "ss03";
+  font-synthesis: none;
+  overflow-wrap: break-word;
+  scrollbar-gutter: stable;
+  text-wrap: pretty;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+img,
+svg {
+  display: block;
+  max-inline-size: 100%;
+}
+
+/* The palette, otty's own, as oklch: a warm cream frame, pale chips, and
+   the ink derived from the same black for the borders and labels. */
+:root {
+  --paper: oklch(100% 0 0);
+  --ink: oklch(14.48% 0 none);
+  --muted: oklch(60.33% 0.0332 283);
+  --chip: oklch(95.39% 0.0025 229);
+  --chip-hover: oklch(92.62% 0.0042 237);
+  --panel: oklch(91.84% 0.0017 248);
+  --frame: oklch(91.42% 0.0174 85);
+  --hairline: oklch(14.48% 0 none / 10%);
+  --border: oklch(14.48% 0 none / 8%);
+  --label: oklch(14.48% 0 none / 42%);
+  --kbd-bg: oklch(14.48% 0 none / 6%);
+  --kbd-ink: oklch(14.48% 0 none / 60%);
+  --hover: oklch(14.48% 0 none / 3.5%);
+  --ring: oklch(14.48% 0 none / 12%);
+  --radius: 14px;
+  --page: clamp(0rem, -4.5rem + 32vw, 40rem);
+  --section: clamp(0rem, -24rem + 88vw, 64rem);
+}
+
+/* Focus ring on keyboard only, as the baseline asks. */
+:focus-visible {
+  outline: max(2px, 0.08em) solid currentColor;
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* The top bar: mark, wordmark, and actions, on the page's own white. */
+.nav {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 10;
+  background: color-mix(in oklch, var(--paper) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-block-end: 1px solid var(--hairline);
+}
+
+.nav-inner {
+  max-inline-size: var(--section);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  padding-block: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav .mark {
+  inline-size: 1.35rem;
+  block-size: 1.35rem;
+  flex: none;
+}
+
+.nav .wordmark {
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.nav .spacer {
+  flex-grow: 1;
+}
+
+.nav a.navlink {
+  text-decoration: none;
+  font-size: 0.925rem;
+  color: var(--muted);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav a.navlink:hover {
+    background: var(--hover);
+    color: var(--ink);
+  }
+}
+
+/* The personal hero otty leads with: mark, name, tagline, and a bio. */
+.hero {
+  padding-block: clamp(3rem, 1rem + 8vw, 7rem);
+}
+
+.hero-inner {
+  max-inline-size: var(--page);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+.hero .mark {
+  inline-size: 6rem;
+  block-size: 6rem;
+  flex: none;
+  user-select: none;
+}
+
+.hero h1 {
+  margin-block-start: 1.5rem;
+  font-size: clamp(2rem, 1.5rem + 1.5vw, 2.5rem);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.hero .tagline {
+  margin-block-start: 0.25rem;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.hero .bio {
+  margin-block-start: 2rem;
+  max-inline-size: 32.5rem;
+  color: var(--muted);
+}
+
+/* The download call to action and the platform chips below it. */
+.cta {
+  margin-block-start: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 500;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  background: var(--ink);
+  color: var(--paper);
+  transition: opacity 0.15s ease, transform 0.05s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn.ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover {
+    opacity: 0.82;
+  }
+  .btn.ghost:hover {
+    background: var(--hover);
+    opacity: 1;
+  }
+}
+
+.platforms {
+  margin-block-start: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.platform {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius);
+  background: var(--chip);
+  border: 1px solid var(--hairline);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.platform .os {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.platform .state {
+  color: var(--label);
+  font-size: 0.8rem;
+}
+
+/* The frame otty draws its shots in: a warm cream mat behind the image. */
+.shot {
+  margin-block: clamp(3rem, 2rem + 4vw, 5rem);
+  border-radius: calc(var(--radius) + 6px);
+  background: var(--frame);
+  padding: clamp(0.6rem, 0.4rem + 0.8vw, 1.25rem);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px var(--hover), 0 24px 60px -24px oklch(14.48% 0 none / 22%);
+}
+
+.shot img {
+  border-radius: var(--radius);
+  inline-size: 100%;
+}
+
+.shot .caption {
+  padding: 0.5rem 0.25rem 0.25rem;
+  font-size: 0.875rem;
+  color: var(--label);
+}
+
+/* A section: a narrow heading over a wide content grid. */
+.section {
+  padding-block: clamp(3rem, 2rem + 4vw, 5.5rem);
+  border-block-start: 1px solid var(--hairline);
+}
+
+.section-inner {
+  max-inline-size: var(--section);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+.section-head {
+  max-inline-size: 40rem;
+  margin-block-end: 2.5rem;
+}
+
+.section-head h2 {
+  font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.1rem);
+  font-weight: 500;
+}
+
+.section-head p {
+  margin-block-start: 0.75rem;
+  color: var(--muted);
+  max-inline-size: 34rem;
+}
+
+/* The feature grid: equal cards that wrap to the column width. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem;
+}
+
+.feat-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.feat-card .k {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: var(--label);
+  letter-spacing: 0.02em;
+}
+
+.feat-card-title {
+  font-weight: 600;
+  font-size: 1.02rem;
+}
+
+.feat-card-desc {
+  color: var(--muted);
+  font-size: 0.925rem;
+}
+
+/* The comparison: three cards, the middle one the app's own. */
+.compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.compare .feat-card.middle {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink) inset;
+}
+
+/* The keyboard cards show the keys as pale chips. */
+.kbds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-block-start: auto;
+  padding-block-start: 0.75rem;
+}
+
+.kbd {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--kbd-ink);
+  background: var(--kbd-bg);
+  border: 1px solid var(--border);
+  border-block-end-width: 2px;
+  border-radius: 6px;
+  padding: 0.15rem 0.45rem;
+  white-space: nowrap;
+}
+
+/* Two shots side by side on wide screens. */
+.shotpair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1.25rem;
+  margin-block: clamp(3rem, 2rem + 4vw, 5rem);
+}
+
+/* The closing call to action. */
+.closing {
+  text-align: center;
+  padding-block: clamp(4rem, 3rem + 4vw, 7rem);
+}
+
+.closing .cta {
+  justify-content: center;
+}
+
+.closing h2 {
+  font-size: clamp(1.8rem, 1.3rem + 1.6vw, 2.4rem);
+  font-weight: 500;
+}
+
+.closing p {
+  margin-block-start: 0.75rem;
+  color: var(--muted);
+}
+
+/* The footer: four columns of quiet links. */
+.footer {
+  border-block-start: 1px solid var(--hairline);
+  padding-block: 3rem 4rem;
+}
+
+.footer-inner {
+  max-inline-size: var(--section);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: 2rem;
+}
+
+.footer-h {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-block-end: 0.75rem;
+}
+
+.footer ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footer a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.925rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .footer a:hover {
+    color: var(--ink);
+  }
+}
+
+.footer .about {
+  font-size: 0.925rem;
+  color: var(--muted);
+}
+
+.newsletter form {
+  display: flex;
+  gap: 0.5rem;
+  margin-block-start: 0.5rem;
+}
+
+.newsletter input {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  color: var(--ink);
+  min-inline-size: 0;
+  flex-grow: 1;
+  font-size: max(16px, 0.9rem);
+}
+
+.newsletter .btn {
+  padding: 0.55rem 1rem;
+  font-size: 0.9rem;
+}
+
+.footer .bottom {
+  margin-block-start: 2.5rem;
+  font-size: 0.8rem;
+  color: var(--label);
+}

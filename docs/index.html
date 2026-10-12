@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nutty — a native macOS terminal</title>
+    <meta
+      name="description"
+      content="Nutty is a native macOS terminal in the spirit of otty, built on MyGo, uix and onevra. Tabs, splits, Ghostty themes, a command palette, and an agent chat that renders markdown."
+    />
+    <link rel="icon" type="image/svg+xml" href="assets/nutty.svg" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap"
+    />
+    <link rel="stylesheet" href="assets/site.css" />
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="nav-inner">
+        <img class="mark" src="assets/nutty.svg" alt="" />
+        <span class="wordmark">Nutty</span>
+        <span class="spacer"></span>
+        <a class="navlink" href="#features">Features</a>
+        <a class="navlink" href="https://github.com/egoist/mygo">Docs</a>
+        <a class="btn" href="#download">Download</a>
+      </div>
+    </nav>
+
+    <main>
+      <!-- The hero, as otty leads: the mark, the name, a tagline. -->
+      <header class="hero">
+        <div class="hero-inner">
+          <img class="mark" src="assets/nutty.svg" alt="Nutty" draggable="false" />
+          <h1>Nutty</h1>
+          <p class="tagline">A native macOS terminal app.</p>
+          <p class="bio">
+            A faithful reimagining of otty, built on MyGo, uix and onevra.
+            Designed for anyone who cares about the feel of every keystroke —
+            and for the code agents you already run.
+          </p>
+          <div class="cta" id="download">
+            <a class="btn" href="dist/darwin-arm64/Nutty 0.1.0 arm64.dmg">
+              Download&nbsp;·&nbsp;Apple&nbsp;Silicon
+            </a>
+            <a class="btn ghost" href="dist/darwin-arm64/Nutty 0.1.0 arm64.dmg">
+              Intel
+            </a>
+          </div>
+          <div class="platforms">
+            <span class="platform"><span class="os">Windows</span><span class="state">Coming</span></span>
+            <span class="platform"><span class="os">Linux</span><span class="state">Coming</span></span>
+          </div>
+        </div>
+      </header>
+
+      <!-- The window itself, on the cream mat otty uses. -->
+      <div class="section-inner">
+        <figure class="shot">
+          <img
+            src="assets/hero.png"
+            alt="Nutty with a shell, a dev server, and the agent chat rendering markdown"
+          />
+          <figcaption class="caption">
+            One window: a shell, a dev server, and the agent chat rendering markdown.
+          </figcaption>
+        </figure>
+      </div>
+
+      <!-- Where it sits: between a plain terminal and a complex ADE. -->
+      <section class="section">
+        <div class="section-inner">
+          <div class="section-head">
+            <h2>Simple where you start.</h2>
+            <p>
+              A terminal should open to a prompt, not a tour. Nutty grows with
+              you — splits, tabs, and an agent panel when you need them.
+            </p>
+          </div>
+          <div class="compare">
+            <div class="feat-card">
+              <span class="k">traditionally terminal</span>
+              <p class="feat-card-title">Plain shell</p>
+              <p class="feat-card-desc">
+                A prompt and a scrollback. Reliable, and nothing more.
+              </p>
+            </div>
+            <div class="feat-card middle">
+              <span class="k">nutty</span>
+              <p class="feat-card-title">Native macOS terminal</p>
+              <p class="feat-card-desc">
+                Tabs, splits, Ghostty themes, a command palette, and an agent
+                chat — all in a single 19&nbsp;MB app.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">complex ADE</span>
+              <p class="feat-card-title">Agent dev environment</p>
+              <p class="feat-card-desc">
+                A platform to configure, an account to create, a model to pay
+                for.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- The craft details. -->
+      <section class="section" id="features">
+        <div class="section-inner">
+          <div class="section-head">
+            <h2>Modern from the ground up.</h2>
+            <p>
+              Every detail of the renderer, the colors and the keys, tuned the
+              way otty tunes them.
+            </p>
+          </div>
+          <div class="grid">
+            <div class="feat-card">
+              <span class="k">font</span>
+              <p class="feat-card-title">JetBrains Mono &amp; Unicode</p>
+              <p class="feat-card-desc">
+                Otty's own font, bundled — ligatures, full Unicode, and
+                clusters, at the size you set.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">colors</span>
+              <p class="feat-card-title">True color &amp; rich styles</p>
+              <p class="feat-card-desc">
+                24-bit color, bold, italics and underlines, exactly as the
+                program asked.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">themes</span>
+              <p class="feat-card-title">Beautiful themes</p>
+              <p class="feat-card-desc">
+                Dozens of Ghostty schemes, or follow the system's light and
+                dark with your own colors.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">links</span>
+              <p class="feat-card-title">Interactive links</p>
+              <p class="feat-card-desc">
+                Command-click a URL, a file, or a path with a line number and
+                jump straight there.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">native</span>
+              <p class="feat-card-title">Native macOS feel</p>
+              <p class="feat-card-desc">
+                Traffic lights, the system appearance, and a GPU renderer —
+                it is a real Mac app.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">keys</span>
+              <p class="feat-card-title">Every command, a shortcut away</p>
+              <p class="feat-card-desc">
+                The command palette is one key away: themes, splits, tabs and
+                font size.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">settings</span>
+              <p class="feat-card-title">Settings, otty's way</p>
+              <p class="feat-card-desc">
+                The same categories as otty, the same defaults — font, cursor,
+                opacity, saved as JSON.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">more</span>
+              <p class="feat-card-title">And more</p>
+              <p class="feat-card-desc">
+                Plenty more under the hood. Read the docs on
+                <a href="https://github.com/egoist/mygo">MyGo</a>,
+                <a href="https://github.com/smallnest/uix">uix</a> and
+                <a href="https://github.com/oneo-me/onevra">onevra</a>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- One window, many threads. -->
+      <section class="section">
+        <div class="section-inner">
+          <div class="section-head">
+            <h2>One window, many threads.</h2>
+            <p>
+              Every tab is its own shell; every shell can split, and the
+              window shows what is happening on each.
+            </p>
+          </div>
+          <div class="grid">
+            <div class="feat-card">
+              <span class="k">tabs</span>
+              <p class="feat-card-title">Tabs, your way.</p>
+              <p class="feat-card-desc">
+                Vertical, in otty's rail — each shell keeps running, named by
+                the directory it is in.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">splits</span>
+              <p class="feat-card-title">Splits &amp; panes.</p>
+              <p class="feat-card-desc">
+                Split right or down, drag the divider, and hop panes with
+                ⌘&#93; and ⌘&#91;.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">watch</span>
+              <p class="feat-card-title">Watch ports &amp; processes.</p>
+              <p class="feat-card-desc">
+                The info panel lists the ports the window listens on and the
+                process each session runs.
+              </p>
+            </div>
+            <div class="feat-card">
+              <span class="k">rest</span>
+              <p class="feat-card-title">Every session, its own home.</p>
+              <p class="feat-card-desc">
+                New tabs open in your working directory; close the window and
+                everything ends together.
+              </p>
+            </div>
+          </div>
+          <figure class="shot">
+            <img
+              src="assets/ports.png"
+              alt="The info panel showing the working directory, its actions, the process, and the ports in use"
+            />
+            <figcaption class="caption">
+              The info panel: the directory, its actions, the process, and the
+              ports in use.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Every command, a shortcut away. -->
+      <section class="section">
+        <div class="section-inner">
+          <div class="section-head">
+            <h2>Every command, a shortcut away.</h2>
+            <p>
+              The palette finds any action; the keys you already know just
+              work.
+            </p>
+          </div>
+          <div class="grid">
+            <div class="feat-card">
+              <span class="k">palette</span>
+              <p class="feat-card-title">Command palette</p>
+              <p class="feat-card-desc">
+                Fuzzy-find any action — tabs, splits, themes, font size,
+                panels.
+              </p>
+              <div class="kbds"><span class="kbd">⌘K</span></div>
+            </div>
+            <div class="feat-card">
+              <span class="k">themes</span>
+              <p class="feat-card-title">Ghostty themes</p>
+              <p class="feat-card-desc">
+                Fourteen curated pairs, light and dark, one key apart.
+              </p>
+              <div class="kbds"><span class="kbd">⌘K</span><span class="kbd">theme</span></div>
+            </div>
+            <div class="feat-card">
+              <span class="k">zoom</span>
+              <p class="feat-card-title">Font size</p>
+              <p class="feat-card-desc">
+                Bigger, smaller, or back to the default — instantly.
+              </p>
+              <div class="kbds">
+                <span class="kbd">⌘=</span><span class="kbd">⌘-</span><span class="kbd">⌘0</span>
+              </div>
+            </div>
+            <div class="feat-card">
+              <span class="k">chrome</span>
+              <p class="feat-card-title">Panels</p>
+              <p class="feat-card-desc">
+                Toggle the rail, the info panel and the agent chat on and off.
+              </p>
+              <div class="kbds">
+                <span class="kbd">⌘⇧B</span><span class="kbd">⌘⇧A</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- The agents. -->
+      <section class="section">
+        <div class="section-inner">
+          <div class="section-head">
+            <h2>Plays well with the agents you already run.</h2>
+            <p>
+              A chat panel beside the shell, where the answer renders as
+              markdown — lists, code blocks, quotes — as it streams in.
+            </p>
+          </div>
+          <div class="shotpair">
+            <figure class="shot">
+              <img
+                src="assets/hero.png"
+                alt="The agent chat rendering a markdown answer with a code block"
+              />
+            </figure>
+            <figure class="shot">
+              <img
+                src="assets/hero-dark.png"
+                alt="The same window in the dark appearance"
+              />
+              <figcaption class="caption">
+                Light or dark — the terminals follow the system, and the
+                windows follow the terminals.
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- The closing call to action. -->
+      <section class="closing section">
+        <div class="section-inner">
+          <h2>Want Nutty?</h2>
+          <p>Free for macOS, with no account required.</p>
+          <div class="cta">
+            <a class="btn" href="dist/darwin-arm64/Nutty 0.1.0 arm64.dmg">
+              Download&nbsp;·&nbsp;Apple&nbsp;Silicon
+            </a>
+            <a class="btn ghost" href="https://github.com/egoist/mygo">Read the docs</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="newsletter">
+          <p class="footer-h">Stay in the loop</p>
+          <p class="about">
+            Releases and the occasional tip about building native Mac apps in
+            Go.
+          </p>
+          <form action="#">
+            <input
+              type="email"
+              placeholder="you@example.com"
+              aria-label="Email address"
+            />
+            <button class="btn" type="submit">Subscribe</button>
+          </form>
+        </div>
+        <div>
+          <p class="footer-h">Product</p>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#download">Download</a></li>
+            <li><a href="assets/hero-dark.png">Screenshots</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="footer-h">Project</p>
+          <ul>
+            <li><a href="https://github.com/egoist/mygo">MyGo</a></li>
+            <li><a href="https://github.com/smallnest/uix">uix</a></li>
+            <li><a href="https://github.com/oneo-me/onevra">onevra</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="footer-h">Contact</p>
+          <ul>
+            <li><a href="https://otty.sh">The app it honors</a></li>
+            <li><a href="https://good-css.com">The CSS it follows</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="section-inner">
+        <p class="bottom">© 2026 Nutty · Built on MyGo, uix and onevra</p>
+      </div>
+    </footer>
+  </body>
+</html>
