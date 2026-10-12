@@ -150,16 +150,25 @@ func (sw *settingsWindow) view(c *ui.Context) {
 	sw.sync()
 }
 
-// categoryItem is one row of the category list; the chosen one is shown.
+// categoryItem is one row of the category list: the category's icon and
+// its name, the chosen one shown on a pressed background, as otty draws
+// them.
 func (sw *settingsWindow) categoryItem(c *ui.Context, id, title string) {
 	t := c.Theme()
 	b := ui.ButtonBase(c.Key("set-cat-" + id)).FillWidth().
-		Padding(6, 10).Radius(t.Radius).FocusRing(false)
+		Padding(7, 8).Radius(t.Radius).FocusRing(false)
 	if sw.page == id {
 		b.Background(t.SurfacePressed)
 	}
 	b.Children(func() {
-		ui.Text(c, title).FontSize(13).SingleLine().TextColor(sw.categoryColor(t, id))
+		// The row fills the button so the icon and the label start at the
+		// list's left edge; a shrink-to-fit row would center on the button.
+		ui.Row(c).FillWidth().Gap(10).Children(func() {
+			if icon := settingsCategoryIcon(id); icon != nil {
+				ui.Image(c, icon).Size(18, 18).TextColor(sw.categoryColor(t, id))
+			}
+			ui.Text(c, title).FontSize(13).SingleLine().TextColor(sw.categoryColor(t, id))
+		})
 	})
 	if b.Clicked() {
 		sw.page = id

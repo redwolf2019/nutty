@@ -322,3 +322,14 @@ func TestSettingsPagesRender(t *testing.T) {
 		}
 	}
 }
+
+// TestSettingsCategoryIcons checks that every settings category has an
+// icon and that the otty paths parse, so a bad extraction or a mygo SVG
+// limitation shows as a test failure, not a blank row.
+func TestSettingsCategoryIcons(t *testing.T) {
+	for _, cat := range settingsCategories {
+		if icon := settingsCategoryIcon(cat.id); icon == nil {
+			t.Errorf("%s: no icon", cat.id)
+		}
+	}
+}
