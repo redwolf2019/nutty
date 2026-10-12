@@ -30,6 +30,25 @@ func (a *app) view(c *ui.Context) {
 		State: &a.palette,
 		Items: a.paletteItems(),
 	})
+	// The terminals above have read this frame's output; follow the shell
+	// into a directory it reports, so the tab, the title and the info
+	// panel show where it is.
+	a.trackWorkingDir()
+}
+
+// trackWorkingDir follows the active shell's directory: when the terminal
+// reports a new working directory (OSC 7), the session takes it, so the
+// rail tab, the strip's user@host:dir title and the info panel's Working
+// Directory show where the shell is, as otty follows its shell.
+func (a *app) trackWorkingDir() {
+	s := a.currentSession()
+	if s == nil || a.activePane == nil || a.activePane.term == nil {
+		return
+	}
+	if d := a.activePane.term.Dir(); d != "" && d != s.dir {
+		s.dir = d
+		a.refreshTitle()
+	}
 }
 
 // viewSidebar is the Sidebar layout: the strip over the whole window, then
