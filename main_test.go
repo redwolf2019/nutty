@@ -19,6 +19,22 @@ func testApp() *app {
 	return &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
 }
 
+// TestWindowLayouts checks that the window draws in each of the three
+// Window Layout settings, with a tab for every session.
+func TestWindowLayouts(t *testing.T) {
+	for _, layout := range []string{"sidebar-left", "tabs-top", "tabs-bottom"} {
+		a := testApp()
+		a.settings.WindowLayout = layout
+		a.newSession("/tmp/nutty-a")
+		a.newSession("/tmp/nutty-b")
+		tt := ui.NewTester(a.view, 1000, 700)
+		tt.Frame()
+		if !tt.HasText("/tmp/nutty-b") {
+			t.Errorf("%s: missing a session tab", layout)
+		}
+	}
+}
+
 func TestPaneTree(t *testing.T) {
 	a := testApp()
 	s := a.newSession("/tmp/nutty-test")

@@ -264,6 +264,32 @@ func TestInfoTabs(t *testing.T) {
 	}(), false)
 }
 
+// TestLayoutSnapshot renders the window in each Window Layout setting for
+// a visual check.
+func TestLayoutSnapshot(t *testing.T) {
+	if os.Getenv("NUTTY_SNAPSHOT") == "" {
+		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
+	}
+	for _, layout := range []string{"sidebar-left", "tabs-top", "tabs-bottom"} {
+		a := testApp()
+		a.settings.WindowLayout = layout
+		a.newSession("/tmp/nutty-a")
+		a.newSession("/tmp/nutty-b")
+		tt := ui.NewTester(a.view, 1000, 700)
+		tt.Frame()
+		f, err := os.Create("/tmp/nutty-layout-" + layout + ".png")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := png.Encode(f, tt.Image()); err != nil {
+			f.Close()
+			t.Fatal(err)
+		}
+		f.Close()
+		t.Log("wrote /tmp/nutty-layout-" + layout + ".png")
+	}
+}
+
 // TestSettingsSnapshot renders every settings category for a visual check.
 func TestSettingsSnapshot(t *testing.T) {
 	if os.Getenv("NUTTY_SNAPSHOT") == "" {

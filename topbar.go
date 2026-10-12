@@ -26,7 +26,7 @@ func (a *app) topstrip(c *ui.Context) {
 	t := c.Theme()
 	bar := c.TitleBar()
 	ui.Row(c).FillWidth().Shrink(0).Height(44).DragWindow().Children(func() {
-		if a.sideOpen {
+		if a.sideOpen && a.settings.WindowLayout == "sidebar-left" {
 			// The rail's column continues through the strip: its surface
 			// and its right border, empty under the traffic lights.
 			ui.Box(c).Width(a.sidebarWidth()).FillHeight().Shrink(0).Background(t.Surface).

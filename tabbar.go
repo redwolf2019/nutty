@@ -2,7 +2,92 @@ package main
 
 import (
 	"github.com/egoist/mygo/ui"
+	"github.com/oneo-me/onevra/source/icons/lucide"
 )
+
+// tabBarView is the horizontal tab bar of the Tabs Top and Tabs Bottom
+// layouts: one tab per session in a row, the active one a raised card, a
+// toggle at the end that hides the bar, as otty's layouts show the tabs
+// across the top or bottom of the window instead of the left rail.
+func (a *app) tabBarView(c *ui.Context) {
+	t := c.Theme()
+	top := a.settings.WindowLayout == "tabs-top"
+	closeID := 0
+	bar := ui.Row(c).FillWidth().Height(38).Shrink(0).Background(t.Surface)
+	// The border separates the bar from the terminal: below it when the
+	// bar is at the top, above it when at the bottom.
+	if top {
+		bar.BorderWidth(0, 0, 1, 0)
+	} else {
+		bar.BorderWidth(1, 0, 0, 0)
+	}
+	bar.BorderColor(t.Border)
+	bar.Children(func() {
+		ui.ScrollHorizontal(c).Grow(1).MinWidth(0).Children(func() {
+			ui.Row(c).Padding(5, 6).Gap(4).Children(func() {
+				for i, s := range a.sessions {
+					if a.tabItem(c, i, s) {
+						closeID = s.id
+					}
+				}
+			})
+		})
+		tb := ui.ButtonBase(c.Key("tabbar-toggle")).Padding(0, 8).
+			Radius(t.Radius).FocusRing(false).Tooltip("Toggle tabs")
+		tb.Children(func() {
+			ui.Image(c, lucide.PanelLeftClose()).Size(14, 14)
+		})
+		if tb.Clicked() {
+			a.toggleSidebar()
+		}
+	})
+	// A close clicked while building must not shift the loop; close after
+	// the bar is built.
+	if closeID != 0 {
+		for _, s := range a.sessions {
+			if s.id == closeID {
+				a.closeSession(s)
+				break
+			}
+		}
+	}
+}
+
+// tabItem draws one horizontal tab, reporting whether its close button
+// was clicked.
+func (a *app) tabItem(c *ui.Context, i int, s *session) (close bool) {
+	t := c.Theme()
+	on := i == a.active
+	b := ui.ButtonBase(c.Key("tab" + sessionID(s.id))).Padding(6, 12).
+		Radius(t.Radius).FocusRing(false)
+	if on {
+		b.Background(selectedCard(t)).BorderWidth(1).BorderColor(t.Border)
+	} else if b.Hovered() {
+		b.Background(t.SurfaceHover)
+	}
+	if b.Clicked() {
+		a.activate(s)
+	}
+	b.Children(func() {
+		ui.Row(c).Gap(6).Children(func() {
+			name := ui.Text(c, homeShown(s.dir)).SingleLine().FontSize(12)
+			if !on {
+				name.TextColor(t.TextMuted)
+			}
+			if b.Hovered() {
+				cl := ui.Button(c, "×").Padding(0, 3).FocusRing(false)
+				cl.TextColor(t.TextMuted)
+				if cl.Hovered() {
+					cl.TextColor(t.Text)
+				}
+				if cl.Clicked() {
+					close = true
+				}
+			}
+		})
+	})
+	return close
+}
 
 // renameDialog renames the active tab in place, as Finder renames a file.
 func (a *app) renameDialog(c *ui.Context) {

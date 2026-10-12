@@ -15,8 +15,14 @@ func (a *app) view(c *ui.Context) {
 	c.SetTheme(ottyTheme(c.Theme().Dark))
 	ui.Column(c).Fill().Children(func() {
 		a.topstrip(c)
+		// The Tabs Top layout puts the tab bar under the strip; the
+		// Sidebar layout keeps the rail on the left, and Tabs Bottom puts
+		// the bar under everything, as otty's Window Layout setting says.
+		if a.sideOpen && a.settings.WindowLayout == "tabs-top" {
+			a.tabBarView(c)
+		}
 		ui.Row(c).Grow(1).MinHeight(0).Children(func() {
-			if a.sideOpen {
+			if a.sideOpen && a.settings.WindowLayout == "sidebar-left" {
 				a.railView(c)
 			}
 			ui.Box(c).Grow(1).MinWidth(0).FillHeight().Clip().Children(func() {
@@ -30,6 +36,9 @@ func (a *app) view(c *ui.Context) {
 				a.chatView(c)
 			}
 		})
+		if a.sideOpen && a.settings.WindowLayout == "tabs-bottom" {
+			a.tabBarView(c)
+		}
 	})
 
 	// The palette opens with Cmd+K as well as the menu's Cmd+Shift+P.
