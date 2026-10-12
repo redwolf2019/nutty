@@ -109,7 +109,7 @@ func TestPaletteItems(t *testing.T) {
 		"Split Right",
 		"Toggle Agent Chat",
 		"Switch to " + s.displayTitle(),
-		"Theme: TokyoNight",
+		"Theme: Tokyo Night",
 		"Theme: Follow system",
 	} {
 		if !labels[want] {

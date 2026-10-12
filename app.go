@@ -166,7 +166,7 @@ func (a *app) closeTab() {
 		return
 	}
 	s := a.sessions[a.active]
-	if a.settings.ConfirmCloseTab && a.pendingClose == nil {
+	if a.confirmClosingTab() && a.pendingClose == nil {
 		a.pendingClose = s
 		return
 	}

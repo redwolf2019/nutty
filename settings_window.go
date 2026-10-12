@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -12,7 +13,7 @@ import (
 	"github.com/smallnest/uix/components/input"
 	"github.com/smallnest/uix/components/numberinput"
 	uixselect "github.com/smallnest/uix/components/select"
-	"github.com/smallnest/uix/components/slider"
+	"github.com/smallnest/uix/components/textarea"
 	uixswitch "github.com/smallnest/uix/components/switch"
 )
 
@@ -27,13 +28,15 @@ type settingsWindow struct {
 	last  settings // the applied snapshot; a difference means a change
 	page  string   // the chosen category
 	wells colorWells
+	lists map[string]*string // def key -> list editor buffer
 }
 
-// colorWells hold the buffers of the color pickers. An unused well shows
-// the theme's color; editing it makes the setting, and Reset forgets it.
+// colorWells hold the buffers of the color pickers, one per color
+// setting. An unused well shows the theme's color; editing it makes the
+// setting, and Reset forgets it.
 type colorWells struct {
-	init         bool
-	foreground, background, cursor, cursorText, selection, selectionText colorWellState
+	init  bool
+	state map[string]*colorWellState
 }
 
 type colorWellState struct {
@@ -42,8 +45,8 @@ type colorWellState struct {
 	inUse bool
 }
 
-// settingsCategories are otty's own, in its order; the ones without a
-// page of their own show a "not in this build" notice.
+// settingsCategories are otty's own, in its order; the pages without a
+// real implementation show a "not in this build" notice.
 var settingsCategories = []struct{ id, title string }{
 	{"general", "General"},
 	{"profiles", "Profiles"},
@@ -84,6 +87,7 @@ func newSettingsWindow(a *app) *mygo.Window {
 func (sw *settingsWindow) view(c *ui.Context) {
 	c.SetTheme(ottyTheme(c.Theme().Dark))
 	t := c.Theme()
+	sw.syncColors() // the wells show the theme's colors before the controls draw
 	ui.Row(c).Fill().Children(func() {
 		// The categories, a column the surface color of the app's rail.
 		ui.Column(c).Width(200).FillHeight().Shrink(0).Background(t.Surface).
@@ -105,18 +109,34 @@ func (sw *settingsWindow) view(c *ui.Context) {
 					}
 				}
 				switch sw.page {
-				case "general":
-					sw.pageGeneral(c)
-				case "shell":
-					sw.pageShell(c)
-				case "controls":
-					sw.pageControls(c)
-				case "view":
-					sw.pageView(c)
 				case "appearance":
 					sw.pageAppearance(c)
-				default:
-					sw.pagePlaceholder(c)
+				case "general":
+					sw.pageFromGroups(c, "general")
+				case "shell":
+					sw.pageFromGroups(c, "shell")
+				case "controls":
+					sw.pageFromGroups(c, "controls")
+				case "editor":
+					sw.pageFromGroups(c, "editor")
+				case "view":
+					sw.pageView(c)
+				case "recipes":
+					sw.pageFromGroups(c, "recipes")
+				case "agents":
+					sw.pageFromGroups(c, "agents")
+				case "data":
+					sw.pageData(c)
+				case "account":
+					sw.pageAccount(c)
+				case "remote":
+					sw.pageRemote(c)
+				case "profiles":
+					sw.pageProfiles(c)
+				case "key_bindings":
+					sw.pageKeyBindings(c)
+				case "advanced":
+					sw.pageAdvanced(c)
 				}
 			})
 		})
@@ -148,147 +168,270 @@ func (sw *settingsWindow) categoryColor(t *ui.Theme, id string) ui.Color {
 	return t.TextMuted
 }
 
-// pageGeneral is the General category: how tabs close.
-func (sw *settingsWindow) pageGeneral(c *ui.Context) {
-	sw.group(c, "Closing", func() {
+// --- the registry-driven pages --------------------------------------------
+
+// pageFromGroups renders one category's groups from the settings registry:
+// the sections of settingsGroups[id], each setting drawn from its def.
+func (sw *settingsWindow) pageFromGroups(c *ui.Context, id string) {
+	for _, g := range settingsGroups[id] {
+		sw.group(c, g.title, func() {
+			for _, key := range g.keys {
+				if d := defByKey(key); d != nil {
+					sw.renderSetting(c, *d)
+				}
+			}
+		})
+	}
+}
+
+// renderSetting draws one setting from its def: a switch, a select, a
+// number, a color well, a text field or a list box. A direct field
+// binding keeps the live controls' state across frames; the others write
+// their value back through the def's setter when they change.
+func (sw *settingsWindow) renderSetting(c *ui.Context, d settingDef) {
+	switch d.kind {
+	case "bool":
 		uixswitch.Switch(c, uixswitch.Props{
-			On: &sw.s.ConfirmCloseTab, Label: "Confirm before closing a tab",
+			On: d.ptr(sw.s).(*bool), Label: d.label,
 		})
-		sw.hint(c, "Ask before a tab with a running program closes.")
-	})
-}
-
-// pageShell is the Shell category: what new sessions run and where.
-func (sw *settingsWindow) pageShell(c *ui.Context) {
-	sw.group(c, "Session", func() {
-		field.Field(c, field.Props{
-			Label: "Command", Hint: "The shell new sessions run. Empty uses your login shell.",
-		}, func() {
-			input.Input(c, input.Props{Value: &sw.s.Command, Placeholder: shellName()})
+		if d.desc != "" {
+			sw.hint(c, d.desc)
+		}
+	case "enum":
+		field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+			labels := make([]string, len(d.enum))
+			for i, o := range d.enum {
+				labels[i] = o.label
+			}
+			cur := d.get(sw.s).(string)
+			show := enumLabel(d, cur)
+			uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels})
+			if show != enumLabel(d, cur) {
+				d.set(sw.s, enumValue(d, show))
+			}
 		})
-		field.Field(c, field.Props{
-			Label: "Working Directory", Hint: "Where new sessions start. Empty uses your home directory.",
-		}, func() {
-			input.Input(c, input.Props{Value: &sw.s.WorkingDirectory, Placeholder: homeDir()})
-		})
-	})
-}
-
-// pageControls is the Controls category: how the keyboard behaves.
-func (sw *settingsWindow) pageControls(c *ui.Context) {
-	sw.group(c, "Keyboard", func() {
-		uixswitch.Switch(c, uixswitch.Props{
-			On: &sw.s.OptionAsAlt, Label: "Option as Meta",
-		})
-		sw.hint(c, "The Option key types Meta to programs, not accented letters and symbols.")
-	})
-}
-
-// pageView is the View category: the rail and the window.
-func (sw *settingsWindow) pageView(c *ui.Context) {
-	sw.group(c, "Sidebar", func() {
-		uixswitch.Switch(c, uixswitch.Props{
-			On: &sw.s.SidebarVisible, Label: "Show the tabs rail",
-		})
-		sw.row(c, "Rail width", func() {
-			numberinput.NumberInput(c, numberinput.Props{Value: &sw.s.SidebarWidth, Lo: 160, Hi: 420, Step: 4})
-		})
-	})
-	sw.group(c, "Window", func() {
-		sw.row(c, "Width", func() {
-			numberinput.NumberInput(c, numberinput.Props{Value: &sw.s.WindowWidth, Lo: 680, Hi: 3200, Step: 20})
-		})
-		sw.row(c, "Height", func() {
-			numberinput.NumberInput(c, numberinput.Props{Value: &sw.s.WindowHeight, Lo: 440, Hi: 2400, Step: 20})
-		})
-	})
-}
-
-// pageAppearance is the Appearance category: the themes, the font, the
-// cursor, the colors and the opacity, otty's appearance settings.
-func (sw *settingsWindow) pageAppearance(c *ui.Context) {
-	sw.group(c, "Theme", func() {
-		sw.row(c, "Theme", func() {
-			uixselect.Select(c, uixselect.Props{
-				Selected: &sw.s.ThemeName, Options: themeNames(),
-				Placeholder: "Follow system",
+	case "number":
+		field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+			numberinput.NumberInput(c, numberinput.Props{
+				Value: d.ptr(sw.s).(*float64), Lo: d.lo, Hi: d.hi, Step: d.step,
 			})
 		})
-		uixswitch.Switch(c, uixswitch.Props{
-			On: &sw.s.AutoThemeDark, Label: "Use a separate dark theme",
+	case "string":
+		field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+			input.Input(c, input.Props{Value: d.ptr(sw.s).(*string)})
 		})
-		sw.row(c, "Dark theme", func() {
-			sel := uixselect.Select(c, uixselect.Props{
-				Selected: &sw.s.ThemeDark, Options: themeNames(),
-				Placeholder: "Same as light",
-			})
-			if !sw.s.AutoThemeDark {
-				sel.Disabled(true)
+	case "list":
+		field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+			sw.renderList(c, d)
+		})
+	case "color":
+		sw.renderColorRow(c, d)
+	}
+}
+
+// renderEnum is the select of an enum setting: it shows the option
+// labels but stores the option values, so a value with a friendlier
+// label (like "Off (typing accents)" for false) still saves the key.
+func enumLabel(d settingDef, v string) string {
+	for _, o := range d.enum {
+		if o.value == v {
+			return o.label
+		}
+	}
+	return v
+}
+
+func enumValue(d settingDef, label string) string {
+	for _, o := range d.enum {
+		if o.label == label {
+			return o.value
+		}
+	}
+	return label
+}
+
+// renderList edits a list-of-strings setting as one item per line. The
+// buffer lives in the window, because the text box must keep the same
+// pointer across frames or its caret resets; it writes the split list
+// back only when the text changed.
+func (sw *settingsWindow) renderList(c *ui.Context, d settingDef) {
+	if sw.lists == nil {
+		sw.lists = map[string]*string{}
+	}
+	b, ok := sw.lists[d.key]
+	if !ok {
+		joined := strings.Join(d.get(sw.s).([]string), "\n")
+		b = &joined
+		sw.lists[d.key] = b
+	}
+	textarea.Textarea(c, textarea.Props{Value: b, Rows: 4})
+	if cur := strings.Join(d.get(sw.s).([]string), "\n"); *b != cur {
+		d.set(sw.s, splitLines(*b))
+	}
+}
+
+// splitLines is a list-of-strings from a text box's lines, blank and
+// whitespace-only lines dropped.
+func splitLines(s string) []string {
+	var out []string
+	for _, ln := range strings.Split(s, "\n") {
+		if ln = strings.TrimSpace(ln); ln != "" {
+			out = append(out, ln)
+		}
+	}
+	return out
+}
+
+// renderColorRow is one named color setting: the well, and a Reset that
+// forgets the setting and returns the well to the theme's color.
+func (sw *settingsWindow) renderColorRow(c *ui.Context, d settingDef) {
+	t := c.Theme()
+	st := sw.wellState(d)
+	field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+		ui.Row(c).Gap(12).Children(func() {
+			colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: d.label})
+			if st.inUse {
+				rb := ui.ButtonBase(c.Key("reset-" + d.key)).Padding(2, 8).Radius(t.Radius).
+					FocusRing(false).Tooltip("Use the theme's color")
+				rb.Children(func() {
+					ui.Row(c).Gap(4).Children(func() {
+						ui.Image(c, lucide.RotateCcw()).Size(12, 12)
+						ui.Text(c, "Reset").FontSize(12).TextColor(t.TextMuted)
+					})
+				})
+				if rb.Clicked() {
+					d.set(sw.s, "")
+					st.inUse = false
+				}
 			}
 		})
 	})
-	sw.group(c, "Font", func() {
-		sw.row(c, "Font family", func() {
-			uixselect.Select(c, uixselect.Props{
-				Selected: &sw.s.FontFamily,
-				Options:  []string{"JetBrains Mono", "Menlo", "Monaco", "SF Mono", "monospace"},
-			})
-		})
-		sw.row(c, "Font size", func() {
-			numberinput.NumberInput(c, numberinput.Props{Value: &sw.s.FontSize, Lo: 8, Hi: 26, Step: 1})
-		})
-		uixswitch.Switch(c, uixswitch.Props{
-			On: &sw.s.FontLigatures, Label: "Ligatures",
-		})
-		uixswitch.Switch(c, uixswitch.Props{
-			On: &sw.s.FontThicken, Label: "Thicker text",
-		})
-		slider.Slider(c, slider.Props{
-			Value: &sw.s.AdjustCellHeight, Min: 0, Max: 0.4, Step: 0.05,
-			Label: "Cell height", Format: func(v float64) string { return percent(v) },
-		})
-	})
-	sw.group(c, "Cursor", func() {
-		sw.row(c, "Style", func() {
-			uixselect.Select(c, uixselect.Props{
-				Selected: &sw.s.CursorStyle,
-				Options:  []string{"block", "bar", "underline"},
-			})
-		})
-		uixswitch.Switch(c, uixswitch.Props{
-			On: &sw.s.CursorBlink, Label: "Blink",
-		})
-	})
-	sw.group(c, "Colors", func() {
-		sw.hint(c, "Set a terminal color by hand; Reset returns it to the theme's.")
-		sw.colorRow(c, "Foreground", &sw.wells.foreground, &sw.s.Foreground)
-		sw.colorRow(c, "Background", &sw.wells.background, &sw.s.Background)
-		sw.colorRow(c, "Cursor", &sw.wells.cursor, &sw.s.CursorColor)
-		sw.colorRow(c, "Cursor text", &sw.wells.cursorText, &sw.s.CursorText)
-		sw.colorRow(c, "Selection", &sw.wells.selection, &sw.s.Selection)
-		sw.colorRow(c, "Selection text", &sw.wells.selectionText, &sw.s.SelectionText)
-	})
-	sw.group(c, "Opacity", func() {
-		slider.Slider(c, slider.Props{
-			Value: &sw.s.WindowOpacity, Min: 0.4, Max: 1, Step: 0.05,
-			Label: "Window", Format: percent,
-		})
-		slider.Slider(c, slider.Props{
-			Value: &sw.s.TerminalOpacity, Min: 0.4, Max: 1, Step: 0.05,
-			Label: "Terminal background", Format: percent,
-		})
-		sw.hint(c, "The terminal background's opacity reaches new sessions.")
+}
+
+// wellState is the picker state of one color setting.
+func (sw *settingsWindow) wellState(d settingDef) *colorWellState {
+	if sw.wells.state == nil {
+		sw.wells.state = map[string]*colorWellState{}
+	}
+	st, ok := sw.wells.state[d.key]
+	if !ok {
+		st = &colorWellState{}
+		sw.wells.state[d.key] = st
+	}
+	return st
+}
+
+// pageView is the View category: the registry's tab and badge settings,
+// plus the details panel's views, each with its own enable switch.
+func (sw *settingsWindow) pageView(c *ui.Context) {
+	sw.pageFromGroups(c, "view")
+	sw.group(c, "Details Panel", func() {
+		sw.hint(c, "The tabs of the panel on the right. Disable one to hide it.")
+		for i := range sw.s.DetailsViews {
+			i := i
+			v := &sw.s.DetailsViews[i]
+			uixswitch.Switch(c, uixswitch.Props{On: &v.Enabled, Label: v.Title})
+		}
 	})
 }
 
-// pagePlaceholder is a category this build does not implement: the app
-// has no account, remote, recipe or agent work, and no built-in editor.
-func (sw *settingsWindow) pagePlaceholder(c *ui.Context) {
+// pageAppearance is the Appearance category: the registry's theme, font,
+// cursor, window and terminal groups, with the sixteen palette colors
+// drawn as a grid inside the Colors section, as otty's appearance does.
+func (sw *settingsWindow) pageAppearance(c *ui.Context) {
+	for _, g := range settingsGroups["appearance"] {
+		sw.group(c, g.title, func() {
+			for _, key := range g.keys {
+				if d := defByKey(key); d != nil {
+					sw.renderSetting(c, *d)
+				}
+			}
+			if g.title == "Colors" {
+				sw.paletteGrid(c)
+			}
+		})
+	}
+}
+
+// paletteGrid is the sixteen palette wells in a grid, and a reset that
+// returns them all to the theme's colors.
+func (sw *settingsWindow) paletteGrid(c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).FillWidth().Gap(4).Children(func() {
-		ui.Text(c, "Not included in this build").TextColor(t.TextMuted)
-		ui.Text(c, "This setting needs a feature Nutty does not have yet.").
-			FontSize(12).TextColor(t.TextMuted)
+	ui.Column(c).FillWidth().Gap(8).Children(func() {
+		ui.Text(c, "Palette").FontSize(11).Bold().TextColor(t.TextMuted)
+		for row := 0; row < 4; row++ {
+			ui.Row(c).Gap(10).Children(func() {
+				for col := 0; col < 4; col++ {
+					i := row*4 + col
+					d := *defByKey(fmt.Sprintf("palette-%d", i))
+					st := sw.wellState(d)
+					colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: d.label})
+				}
+			})
+		}
+		if sw.s.anyPalette() {
+			rb := ui.ButtonBase(c.Key("reset-palette")).Padding(2, 8).Radius(t.Radius).
+				FocusRing(false).Tooltip("Use the theme's colors")
+			rb.Children(func() {
+				ui.Row(c).Gap(4).Children(func() {
+					ui.Image(c, lucide.RotateCcw()).Size(12, 12)
+					ui.Text(c, "Reset palette").FontSize(12).TextColor(t.TextMuted)
+				})
+			})
+			if rb.Clicked() {
+				for i := range sw.s.Palette {
+					sw.s.Palette[i] = ""
+				}
+				for i := 0; i < 16; i++ {
+					if st := sw.wells.state[fmt.Sprintf("palette-%d", i)]; st != nil {
+						st.inUse = false
+					}
+				}
+			}
+		}
+	})
+}
+
+// --- pages without a real implementation yet ------------------------------
+
+// pageProfiles is the Profiles category; the editor lands in a later pass.
+func (sw *settingsWindow) pageProfiles(c *ui.Context) {
+	sw.pageUnavailable(c, "Profiles", "Profiles come next; the default profile starts every new pane.")
+}
+
+// pageKeyBindings is the Key Bindings category; the recorder lands in a
+// later pass.
+func (sw *settingsWindow) pageKeyBindings(c *ui.Context) {
+	sw.pageUnavailable(c, "Key Bindings", "The key binding recorder comes next.")
+}
+
+// pageAdvanced is the Advanced category; the All Settings list lands in a
+// later pass.
+func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
+	sw.pageUnavailable(c, "Advanced", "The All Settings list comes next.")
+}
+
+// pageData is the Data category: cloud sync, which this build has no
+// backend for. Otty shows the same notice when the feature is absent.
+func (sw *settingsWindow) pageData(c *ui.Context) {
+	sw.pageUnavailable(c, "Sync & Backup", "Not available in this build")
+}
+
+// pageAccount is the Account category: the app is signed out.
+func (sw *settingsWindow) pageAccount(c *ui.Context) {
+	sw.pageUnavailable(c, "Account", "Not signed in")
+}
+
+// pageRemote is the Remote category, otty's own notice for it.
+func (sw *settingsWindow) pageRemote(c *ui.Context) {
+	sw.pageUnavailable(c, "Remote", "Not available in this build.")
+}
+
+// pageUnavailable is a category with a heading and a muted notice.
+func (sw *settingsWindow) pageUnavailable(c *ui.Context, title, notice string) {
+	t := c.Theme()
+	sw.group(c, title, func() {
+		ui.Text(c, notice).FontSize(12).TextColor(t.TextMuted)
 	})
 }
 
@@ -303,57 +446,17 @@ func (sw *settingsWindow) group(c *ui.Context, title string, fn func()) {
 	})
 }
 
-// row is a labeled control on one line.
-func (sw *settingsWindow) row(c *ui.Context, label string, fn func()) {
-	t := c.Theme()
-	ui.Row(c).FillWidth().Gap(12).Children(func() {
-		ui.Text(c, label).FontSize(13).SingleLine().Width(120).Shrink(0).TextColor(t.Text)
-		ui.Box(c).Grow(1).MinWidth(0).Children(fn)
-	})
-}
-
 // hint is a muted explanation under a control.
 func (sw *settingsWindow) hint(c *ui.Context, text string) {
 	ui.Text(c, text).FontSize(11).TextColor(c.Theme().TextMuted)
 }
 
-// colorRow is a named color well with a Reset that forgets the setting.
-func (sw *settingsWindow) colorRow(c *ui.Context, label string, st *colorWellState, set *string) {
-	t := c.Theme()
-	ui.Row(c).FillWidth().Gap(12).Children(func() {
-		ui.Text(c, label).FontSize(13).SingleLine().Width(120).Shrink(0).TextColor(t.Text)
-		colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: label})
-		if st.inUse {
-			rb := ui.ButtonBase(c.Key("reset-"+label)).Padding(2, 8).Radius(t.Radius).
-				FocusRing(false).Tooltip("Use the theme's color")
-			rb.Children(func() {
-				ui.Row(c).Gap(4).Children(func() {
-					ui.Image(c, lucide.RotateCcw()).Size(12, 12)
-					ui.Text(c, "Reset").FontSize(12).TextColor(t.TextMuted)
-				})
-			})
-			if rb.Clicked() {
-				*set = ""
-				st.inUse = false
-			}
-		}
-	})
-}
-
 // --- applying changes ------------------------------------------------------
 
-// sync turns the color wells' buffers into settings, and applies and saves
-// whatever differs from the last applied snapshot. The selects store their
-// "Follow system" choice as that literal; here it becomes the empty name
+// sync applies and saves whatever differs from the last applied snapshot.
+// The selects store their "Follow system" theme choice as the empty name
 // that means following the window.
 func (sw *settingsWindow) sync() {
-	sw.syncColors()
-	if sw.s.ThemeName == "Follow system" {
-		sw.s.ThemeName = ""
-	}
-	if sw.s.ThemeDark == "Follow system" {
-		sw.s.ThemeDark = ""
-	}
 	if !reflect.DeepEqual(*sw.s, sw.last) {
 		sw.last = *sw.s
 		sw.a.applySettings()
@@ -361,9 +464,9 @@ func (sw *settingsWindow) sync() {
 	}
 }
 
-// syncColors writes the color wells back into the settings: an unused well
-// follows the theme's color, editing one makes the setting, and a change
-// of theme refreshes the unused ones.
+// syncColors writes the color wells back into the settings: an unused
+// well follows the theme's color, editing one makes the setting, and a
+// change of theme refreshes the unused ones.
 func (sw *settingsWindow) syncColors() {
 	th := themeFor(sw.s.ThemeName, false)
 	if th == nil {
@@ -380,7 +483,23 @@ func (sw *settingsWindow) syncColors() {
 	if selDef.A == 0 {
 		selDef = ui.Hex("#A8C7FA")
 	}
-	sync := func(st *colorWellState, hex string, def ui.Color, set *string) {
+	defColor := func(d settingDef) ui.Color {
+		switch d.key {
+		case "cursor-color":
+			return cursorDef
+		case "selection-background":
+			return selDef
+		}
+		var i int
+		if n, _ := fmt.Sscanf(d.key, "palette-%d", &i); n == 1 {
+			return th.Palette[i]
+		}
+		return th.Foreground // foreground, cursor text, selection text
+	}
+	sync := func(d settingDef, set func(string)) {
+		st := sw.wellState(d)
+		hex := d.get(sw.s).(string)
+		def := defColor(d)
 		if !sw.wells.init {
 			if hex != "" {
 				st.color = ui.Hex(hex)
@@ -397,18 +516,20 @@ func (sw *settingsWindow) syncColors() {
 		if st.color != st.base {
 			st.inUse = true
 			st.base = st.color
-			*set = colorHex(st.color)
+			set(colorHex(st.color))
 		} else if st.inUse {
-			*set = colorHex(st.color)
+			set(colorHex(st.color))
 		}
 	}
-	sync(&sw.wells.foreground, sw.s.Foreground, th.Foreground, &sw.s.Foreground)
-	sync(&sw.wells.background, sw.s.Background, th.Background, &sw.s.Background)
-	sync(&sw.wells.cursor, sw.s.CursorColor, cursorDef, &sw.s.CursorColor)
-	sync(&sw.wells.cursorText, sw.s.CursorText, th.Foreground, &sw.s.CursorText)
-	sync(&sw.wells.selection, sw.s.Selection, selDef, &sw.s.Selection)
-	sync(&sw.wells.selectionText, sw.s.SelectionText, th.Foreground, &sw.s.SelectionText)
+	for _, key := range []string{"foreground", "background", "cursor-color", "cursor-text", "selection-background", "selection-foreground"} {
+		key := key
+		d := *defByKey(key)
+		sync(d, func(v string) { d.set(sw.s, v) })
+	}
+	for i := 0; i < 16; i++ {
+		i := i
+		d := *defByKey(fmt.Sprintf("palette-%d", i))
+		sync(d, func(v string) { d.set(sw.s, v) })
+	}
 	sw.wells.init = true
 }
-
-func percent(v float64) string { return fmt.Sprintf("%.0f%%", v*100) }

@@ -90,9 +90,9 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 		Theme:       theme,
 		DarkTheme:   darkTheme,
 		Cursor:      a.cursorStyle(),
-		NoBlink:     !a.settings.CursorBlink,
+		NoBlink:     a.settings.CursorBlinkStyle == "default_off" || a.settings.CursorBlinkStyle == "always_off",
 		Scrollback:  a.scrollbackBytes(),
-		OptionAsAlt: a.settings.OptionAsAlt,
+		OptionAsAlt: a.optionAsAlt(),
 		Transparent: a.settings.TerminalOpacity < 1,
 		OnTitle: func(title string) {
 			a.win.Update(func() {

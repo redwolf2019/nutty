@@ -46,36 +46,6 @@ func ottyTermTheme(dark bool) *terminal.Theme {
 	return &terminal.Theme{Foreground: ui.Hex("#3D3D3B"), Background: ui.Hex("#FCFAF8"), Palette: terminal.LightTheme().Palette}
 }
 
-// curatedThemes pairs a light and a dark palette for the palette and the
-// View menu. The names are iTerm2-Color-Schemes names the terminal plugin
-// ships with Ghostty's emulator.
-var curatedThemes = []struct{ Light, Dark string }{
-	{"TokyoNight Day", "TokyoNight"},
-	{"Catppuccin Latte", "Catppuccin Mocha"},
-	{"GitHub Light Default", "GitHub Dark Default"},
-	{"Gruvbox Light", "Gruvbox Dark"},
-	{"Nord Light", "Nord"},
-	{"Everforest Light Med", "Everforest Dark Med"},
-	{"iTerm2 Solarized Light", "iTerm2 Solarized Dark"},
-	{"Bluloco Light", "Dracula"},
-	{"Monokai Pro Light", "Monokai Classic"},
-	{"Atom One Light", "Atom One Dark"},
-	{"Night Owlish Light", "Night Owl"},
-	{"Rose Pine Dawn", "Rose Pine Moon"},
-	{"Dawnfox", "Carbonfox"},
-	{"Snazzy Soft", "Snazzy"},
-}
-
-// themeNames lists the curated themes for the palette, plus follow-system.
-func themeNames() []string {
-	out := make([]string, 0, 1+2*len(curatedThemes))
-	out = append(out, "Follow system")
-	for _, pair := range curatedThemes {
-		out = append(out, pair.Light, pair.Dark)
-	}
-	return out
-}
-
 // applyTheme re-applies the terminals' colors: after a change of
 // appearance, so the "follow system" terminals keep blending with the
 // strip, as the window theme changes.

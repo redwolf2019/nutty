@@ -264,21 +264,17 @@ func TestInfoTabs(t *testing.T) {
 	}(), false)
 }
 
-// TestSettingsSnapshot renders the Settings window for a visual check.
+// TestSettingsSnapshot renders every settings category for a visual check.
 func TestSettingsSnapshot(t *testing.T) {
 	if os.Getenv("NUTTY_SNAPSHOT") == "" {
 		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
 	}
 	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
-	sw := &settingsWindow{a: a, s: a.settings, last: *a.settings, page: "appearance"}
-	for _, dark := range []bool{false, true} {
+	for _, cat := range settingsCategories {
+		sw := &settingsWindow{a: a, s: a.settings, last: *a.settings, page: cat.id}
 		tt := ui.NewTester(sw.view, 760, 540)
-		tt.SetDark(dark)
-		name := "settings"
-		if dark {
-			name = "settings-dark"
-		}
-		f, err := os.Create("/tmp/nutty-" + name + ".png")
+		tt.Frame()
+		f, err := os.Create("/tmp/nutty-settings-" + cat.id + ".png")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -287,6 +283,6 @@ func TestSettingsSnapshot(t *testing.T) {
 			t.Fatal(err)
 		}
 		f.Close()
-		t.Log("wrote /tmp/nutty-" + name + ".png")
+		t.Log("wrote /tmp/nutty-settings-" + cat.id + ".png")
 	}
 }

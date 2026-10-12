@@ -38,10 +38,13 @@ func (a *app) termFont() terminal.Font {
 	if f.Size <= 0 {
 		f.Size = 13
 	}
-	if s.FontLigatures {
-		f.Features = []string{"dlig"} // otty's default ligature set
-	} else {
+	switch s.FontLigatures {
+	case "calt":
+		f.Features = []string{"calt"}
+	case "off":
 		f.Features = []string{"-calt", "-liga", "-dlig"}
+	default: // "dlig", otty's default ligature set
+		f.Features = []string{"dlig"}
 	}
 	if s.FontThicken {
 		f.Thicken = true
