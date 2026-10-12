@@ -99,10 +99,11 @@ func TestSnapshot(t *testing.T) {
 	}
 }
 
-// TestCorners renders the floating toggles that reopen a hidden rail or
-// panel, in the three states they appear in: NUTTY_SNAPSHOT=1 go test
-// -run TestCorners.
-func TestCorners(t *testing.T) {
+// TestStripToggles renders the title strip's two toggles — the one that
+// hides the sessions and the one that opens the info panel — in every
+// layout, at the title's height: NUTTY_SNAPSHOT=1 go test -run
+// TestStripToggles.
+func TestStripToggles(t *testing.T) {
 	if os.Getenv("NUTTY_SNAPSHOT") == "" {
 		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
 	}
@@ -124,13 +125,13 @@ func TestCorners(t *testing.T) {
 		root:    &node{term: p},
 		panes:   []*pane{p},
 	}
-	render := func(name string, sideOpen bool, panel panelMode) {
-		a := &app{settings: defaultSettings(), sideOpen: sideOpen, agent: &demoAgent{}}
+	render := func(name string, layout string) {
+		a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+		a.settings.WindowLayout = layout
 		a.sessions = []*session{s}
 		a.active = 0
 		a.activePane = p
 		a.sel = sessionID(1)
-		a.panel = panel
 		tt := ui.NewTester(a.view, 1280, 780)
 		tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})
 		f, err := os.Create("/tmp/nutty-" + name + ".png")
@@ -144,9 +145,9 @@ func TestCorners(t *testing.T) {
 		f.Close()
 		t.Log("wrote /tmp/nutty-" + name + ".png")
 	}
-	render("corners-both", false, panelNone)
-	render("corners-left", false, panelInfo)
-	render("corners-right", true, panelNone)
+	render("strip-toggles-sidebar", "sidebar-left")
+	render("strip-toggles-tabs-top", "tabs-top")
+	render("strip-toggles-tabs-bottom", "tabs-bottom")
 }
 
 // TestInfoTabs renders the right panel's three sections that load real
