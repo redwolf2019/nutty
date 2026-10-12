@@ -125,8 +125,8 @@ func TestStripToggles(t *testing.T) {
 		root:    &node{term: p},
 		panes:   []*pane{p},
 	}
-	render := func(name string, layout string, hoverX float32) {
-		a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+	render := func(name string, layout string, sideOpen bool, hoverX float32) {
+		a := &app{settings: defaultSettings(), sideOpen: sideOpen, agent: &demoAgent{}}
 		a.settings.WindowLayout = layout
 		a.sessions = []*session{s}
 		a.active = 0
@@ -150,11 +150,12 @@ func TestStripToggles(t *testing.T) {
 		f.Close()
 		t.Log("wrote /tmp/nutty-" + name + ".png")
 	}
-	render("strip-toggles-sidebar", "sidebar-left", 0)
-	render("strip-toggles-sidebar-left-hover", "sidebar-left", 100)
-	render("strip-toggles-sidebar-right-hover", "sidebar-left", 1250)
-	render("strip-toggles-tabs-top-hover", "tabs-top", 1250)
-	render("strip-toggles-tabs-bottom-hover", "tabs-bottom", 1250)
+	render("strip-toggles-sidebar", "sidebar-left", true, 0)
+	render("strip-toggles-sidebar-left-hover", "sidebar-left", true, 100)
+	render("strip-toggles-sidebar-right-hover", "sidebar-left", true, 1250)
+	render("strip-hidden-left-hover", "sidebar-left", false, 80)
+	render("strip-toggles-tabs-top-hover", "tabs-top", true, 1250)
+	render("strip-toggles-tabs-bottom-hover", "tabs-bottom", true, 1250)
 }
 
 // TestInfoTabs renders the right panel's three sections that load real

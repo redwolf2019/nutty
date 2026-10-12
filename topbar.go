@@ -37,6 +37,21 @@ func (a *app) topstrip(c *ui.Context) {
 					a.railStripToggles(c)
 				})
 			}
+		} else if a.settings.WindowLayout == "sidebar-left" {
+			// The rail is hidden, so the traffic lights sit over the title;
+			// hovering the strip's left shows the toggle that brings the
+			// rail back, right of the lights.
+			left := ui.Box(c).Width(bar.Left + 6 + 24).FillHeight().Shrink(0)
+			if left.Hovered() {
+				left.Children(func() {
+					ui.Row(c).FillHeight().Height(a.stripBar(c)).Gap(2).Children(func() {
+						ui.Box(c).Width(bar.Left + 6)
+						a.stripButton(c, "strip-rail-open", lucide.PanelLeft(), 12, "Show sidebar", func() {
+							a.toggleSidebar()
+						})
+					})
+				})
+			}
 		} else {
 			// Without the rail the traffic lights sit over the title.
 			ui.Box(c).Width(bar.Left + 6).Shrink(0)
