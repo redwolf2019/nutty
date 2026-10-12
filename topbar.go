@@ -192,41 +192,30 @@ func (a *app) infoToolbar(c *ui.Context) {
 		})
 }
 
-// infoToolbarRow is the info panel's mode switch: the "Info" pill, the
-// icons for the outline, git and files sections and the panel toggle, at
-// the strip's height. The Sidebar layout draws it in the top strip; the
-// Tabs layouts draw it at the top of the panel's full-height column.
+// infoToolbarRow is the info panel's mode switch: the section that is open
+// shows its label on a pill, the others are bare icons, and the panel
+// toggle sits at the right, at the strip's height. The Sidebar layout
+// draws it in the top strip; the Tabs layouts draw it at the top of the
+// panel's full-height column.
 func (a *app) infoToolbarRow(c *ui.Context) {
-	t := c.Theme()
 	ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
-		pill := ui.ButtonBase(c.Key("toolbar-info")).Padding(5, 9).
-			Radius(999).FocusRing(false).Tooltip("Info")
-		if a.info.tab == infoTabInfo {
-			pill.Background(t.SurfaceHover)
-		}
-		pill.Children(func() {
-			ui.Row(c).Gap(5).Children(func() {
-				ui.Image(c, lucide.Info()).Size(14, 14)
-				ui.Text(c, "Info").FontSize(12).TextColor(t.Text)
-			})
-		})
-		if pill.Clicked() {
+		a.infoTabButton(c, "toolbar-info", lucide.Info(), "Info", infoTabInfo, func() {
 			if a.info.tab == infoTabInfo {
 				a.toggleInfo()
 			} else {
 				a.setInfoTab(infoTabInfo)
 			}
-		}
+		})
 		// The sections the View page's Details Panel settings hide
 		// do not draw their button, as otty drops them.
 		if a.detailsViewEnabled("outline") {
-			a.tabButton(c, "toolbar-outline", lucide.List(), "Outline", infoTabOutline)
+			a.infoTabButton(c, "toolbar-outline", lucide.List(), "Outline", infoTabOutline, nil)
 		}
 		if a.detailsViewEnabled("git") {
-			a.tabButton(c, "toolbar-git", lucide.GitBranch(), "Git", infoTabGit)
+			a.infoTabButton(c, "toolbar-git", lucide.GitBranch(), "Git", infoTabGit, nil)
 		}
 		if a.detailsViewEnabled("files") {
-			a.tabButton(c, "toolbar-files", lucide.Folder(), "Files", infoTabFiles)
+			a.infoTabButton(c, "toolbar-files", lucide.Folder(), "Files", infoTabFiles, nil)
 		}
 		ui.Box(c).Grow(1)
 		a.iconButton(c, "toolbar-panel", lucide.PanelRightClose(), "Toggle panel", func() {
@@ -235,20 +224,32 @@ func (a *app) infoToolbarRow(c *ui.Context) {
 	})
 }
 
-// tabButton is a toolbar icon that opens one section of the info panel,
-// highlighted while that section is the one shown.
-func (a *app) tabButton(c *ui.Context, key string, icon *ui.SVG, tip string, tab infoTab) {
+// infoTabButton is one section of the info panel's mode switch: the open
+// section is a labeled pill, the others are bare icons, so only the open
+// section's text shows, as otty shows the switch. The Info button closes
+// the panel when it is the open section.
+func (a *app) infoTabButton(c *ui.Context, key string, icon *ui.SVG, label string, tab infoTab, onClick func()) {
 	t := c.Theme()
-	b := ui.ButtonBase(c.Key(key)).Padding(5, 5).Radius(t.Radius).
-		FocusRing(false).Tooltip(tip)
+	b := ui.ButtonBase(c.Key(key)).Radius(999).FocusRing(false).Tooltip(label)
 	if a.info.tab == tab {
-		b.Background(t.SurfaceHover)
+		b.Background(t.SurfaceHover).Padding(5, 9)
+	} else {
+		b.Padding(5, 5)
 	}
 	b.Children(func() {
-		ui.Image(c, icon).Size(15, 15)
+		ui.Row(c).Gap(5).Children(func() {
+			ui.Image(c, icon).Size(14, 14)
+			if a.info.tab == tab {
+				ui.Text(c, label).FontSize(12).TextColor(t.Text)
+			}
+		})
 	})
 	if b.Clicked() {
-		a.setInfoTab(tab)
+		if onClick != nil {
+			onClick()
+		} else {
+			a.setInfoTab(tab)
+		}
 	}
 }
 
