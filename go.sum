@@ -14,6 +14,8 @@ github.com/egoist/mygo v0.4.5 h1:WXLVs46ELaf+8JfIEeiLzSAMCx3OuldvVyJV5C9bHNs=
 github.com/egoist/mygo v0.4.5/go.mod h1:1sRzZ6jEhKE7iuEQXjyoXDgxyxQ1uTgMHDcDKZvoDIU=
 github.com/egoist/mygo v0.4.6 h1:p4hDWO1e0tkMCL/yxPwg7P0ACNUbDjbSSeHL1sQpCjA=
 github.com/egoist/mygo v0.4.6/go.mod h1:+B7ZTBwVfa/nL/6+o6Vm8xBFYwJoFCg4VJbY9k6T0E8=
+github.com/egoist/mygo v0.4.8 h1:NpzFFiv8L4uXhkriknAehoucN//gtCtnGgr/DzQxZIw=
+github.com/egoist/mygo v0.4.8/go.mod h1:+B7ZTBwVfa/nL/6+o6Vm8xBFYwJoFCg4VJbY9k6T0E8=
 github.com/go-text/typesetting v0.3.5 h1:XZPUooClHY0Vf/rFyUyuPRNEkawARaFzLMQcXLSEyPk=
 github.com/go-text/typesetting v0.3.5/go.mod h1:XZO1hD+nQVyvVa5IicQk7FsCa4PFQaJ2soWAP1f//68=
 github.com/go-text/typesetting-utils v0.0.0-20260419141703-4ffe8874dabc h1:8FGo2It5K75XkavhTiCKExUfVaVDS1feBnLCru5qeoY=
@@ -28,6 +30,8 @@ github.com/oneo-me/onevra/source v0.2026.7 h1:BXFdo/ekqnKblwwKbv1MShuUM3CFxxongV
 github.com/oneo-me/onevra/source v0.2026.7/go.mod h1:/U7dISV2QHjDpZLJ3tbtDjByIOeU8+H5MClido0Qgiw=
 github.com/smallnest/uix v0.0.0-20261010233854-b7cb6248325f h1:L/Jah+KMbZYAQXNjz+d3YE6w4MmwoZBFgR47jutaN34=
 github.com/smallnest/uix v0.0.0-20261010233854-b7cb6248325f/go.mod h1:MF6/TR9hosdO1j9L14IOwoZRy3e6aK3BQ2u01teDvWo=
+github.com/smallnest/uix v0.1.0 h1:UrpAW5KGPsot+aLdLeaWqUrtrEPBlvnhtDe4CIjJ+Rg=
+github.com/smallnest/uix v0.1.0/go.mod h1:H5BV3N2U4EJsR6+iKlvHAgM2H2I5TsV+g4oUuEe/nf4=
 github.com/yuin/goldmark v1.8.6 h1:d0VcaP1sx9GkFVkoW+KtggpGi2KZ965i14b0+bDQST4=
 github.com/yuin/goldmark v1.8.6/go.mod h1:ip/1k0VRfGynBgxOz0yCqHrbZXhcjxyuS66Brc7iBKg=
 golang.org/x/image v0.47.0 h1:za/8gVz++PPZqmZJBNSISICN5Rrj5zixP/8K++fgmqo=
