@@ -673,7 +673,9 @@ func (a *app) fileTree(c *ui.Context, items []tree.Item, depth int) {
 			b.Background(t.SurfaceHover)
 		}
 		b.Children(func() {
-			ui.Row(c).Gap(6).Children(func() {
+			// The row fills the button so the items of a level line up at
+			// the same x; a shrink-to-fit row would center on the button.
+			ui.Row(c).FillWidth().Gap(6).Children(func() {
 				if dir {
 					if *it.Open {
 						ui.Image(c, lucide.ChevronDown()).Size(13, 13).TextColor(faint(t))
