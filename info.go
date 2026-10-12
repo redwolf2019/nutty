@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -640,7 +641,8 @@ func buildFileTree(dir string, depth int, nodes *int) []tree.Item {
 
 // infoFilesView is the Files section: the working directory as a tree,
 // with folders that open in Finder and files that open in Zed, as otty's
-// Files tab browses the project.
+// Files tab browses the project. The tree draws a folder icon on each
+// directory and a file icon on each file, as otty does.
 func (a *app) infoFilesView(c *ui.Context) {
 	t := c.Theme()
 	if !a.info.filesDone {
@@ -652,6 +654,52 @@ func (a *app) infoFilesView(c *ui.Context) {
 			ui.Text(c, "No files").TextColor(t.TextMuted)
 			return
 		}
-		tree.Tree(c, tree.Props{Items: a.info.files})
+		a.fileTree(c, a.info.files, 0)
 	})
+}
+
+// fileTree draws one level of the Files section's tree. A directory shows
+// a chevron and a folder icon, opens and closes when clicked, and nests
+// its children one indent in; a file shows a file icon and opens on a
+// click. The open state lives on the items' Open pointers, as the tree
+// component's does.
+func (a *app) fileTree(c *ui.Context, items []tree.Item, depth int) {
+	t := c.Theme()
+	for i, it := range items {
+		dir := it.Open != nil
+		b := ui.ButtonBase(c.Key(fmt.Sprintf("file-%d-%d", depth, i))).
+			FillWidth().Padding(4, 0, 4, 4+float32(depth)*12).Radius(t.Radius).FocusRing(false)
+		if b.Hovered() {
+			b.Background(t.SurfaceHover)
+		}
+		b.Children(func() {
+			ui.Row(c).Gap(6).Children(func() {
+				if dir {
+					if *it.Open {
+						ui.Image(c, lucide.ChevronDown()).Size(13, 13).TextColor(faint(t))
+					} else {
+						ui.Image(c, lucide.ChevronRight()).Size(13, 13).TextColor(faint(t))
+					}
+				} else {
+					ui.Box(c).Width(13)
+				}
+				if dir {
+					ui.Image(c, lucide.Folder()).Size(14, 14).TextColor(t.TextMuted)
+				} else {
+					ui.Image(c, lucide.File()).Size(14, 14).TextColor(t.TextMuted)
+				}
+				ui.Text(c, it.Label).SingleLine().FontSize(12).TextColor(t.Text)
+			})
+		})
+		if b.Clicked() {
+			if dir {
+				*it.Open = !*it.Open
+			} else if it.Action != nil {
+				it.Action()
+			}
+		}
+		if dir && *it.Open {
+			a.fileTree(c, it.Children, depth+1)
+		}
+	}
 }
