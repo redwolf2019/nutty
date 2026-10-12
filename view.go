@@ -48,6 +48,9 @@ func (a *app) trackWorkingDir() {
 	if d := a.activePane.term.Dir(); d != "" && d != s.dir {
 		s.dir = d
 		a.refreshTitle()
+		// The Git and Files panels describe the working directory; a new
+		// directory makes what they hold stale.
+		a.infoDirChanged()
 	}
 }
 

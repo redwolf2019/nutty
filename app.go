@@ -146,6 +146,9 @@ func (a *app) activate(s *session) {
 	a.activePane = s.panes[0]
 	a.sel = sessionID(s.id)
 	a.refreshTitle()
+	// The info panel follows the active session, whose Git and Files
+	// sections hold the session's working directory; mark them stale.
+	a.infoDirChanged()
 }
 
 // refreshTitle follows the active session's title, as otty names its

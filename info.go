@@ -166,6 +166,24 @@ func (a *app) loadInfoTab() {
 	}
 }
 
+// infoDirChanged marks the info panel's directory-dependent sections stale
+// after the working directory changes, and reloads the one that is open,
+// so the Git and Files panels follow the shell into the new directory
+// instead of keeping the previous one's state. The other sections (Info,
+// Outline) read live state and need no invalidation.
+func (a *app) infoDirChanged() {
+	a.info.git.done = false
+	a.info.git.branch = ""
+	a.info.git.changes = nil
+	a.info.git.diffOpen = ""
+	a.info.git.diffLines = nil
+	a.info.filesDone = false
+	a.info.files = nil
+	if a.info.tab == infoTabGit || a.info.tab == infoTabFiles {
+		a.loadInfoTab()
+	}
+}
+
 // infoSection is one titled block of the info panel. The title is plain
 // text, small and muted, as otty draws its section headers.
 func (a *app) infoSection(c *ui.Context, title string, fn func()) {
