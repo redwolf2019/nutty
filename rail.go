@@ -16,8 +16,8 @@ func (a *app) railView(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Width(a.sidebarWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 1, 0, 0).BorderColor(t.Border).Children(func() {
-			// The section header: "TABS" and its menu, a filter icon that
-			// opens the command palette.
+			// The section header: "TABS", its menu, a filter icon that opens
+			// the command palette, and the rail's own toggle that hides it.
 			ui.Row(c).FillWidth().Padding(0, 9, 0, 18).Gap(6).Children(func() {
 				ui.Text(c, "TABS").Bold().FontSize(11).TextColor(faint(t)).
 					LetterSpacing(1).Grow(1)
@@ -28,6 +28,14 @@ func (a *app) railView(c *ui.Context) {
 				})
 				if ib.Clicked() {
 					a.paletteOpen = true
+				}
+				sl := ui.ButtonBase(c.Key("rail-toggle")).Padding(0).
+					Radius(t.Radius).FocusRing(false).Tooltip("Toggle sidebar")
+				sl.Children(func() {
+					ui.Image(c, lucide.PanelLeftClose()).Size(15, 15)
+				})
+				if sl.Clicked() {
+					a.toggleSidebar()
 				}
 			})
 			closeID := 0

@@ -64,6 +64,13 @@ func TestSiteShots(t *testing.T) {
 		tt := ui.NewTester(a.view, 1280, 780)
 		tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})
 		tt.SetDark(dark)
+		// The toolbars appear on hover, so rest the pointer over them for
+		// the shot: the chat column is 360 wide, the info column 220.
+		if panel == panelChat {
+			tt.Move(1100, 15)
+		} else {
+			tt.Move(1170, 15)
+		}
 		f, err := os.Create("/tmp/nutty-site-" + name + ".png")
 		if err != nil {
 			t.Fatal(err)

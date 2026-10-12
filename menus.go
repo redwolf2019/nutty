@@ -54,7 +54,7 @@ func setAppMenu() {
 		{
 			Label: "View",
 			Submenu: []*mygo.MenuItem{
-				{Label: "Toggle Sidebar", Accelerator: "CmdOrCtrl+Shift+B", Click: act(func(a *app) { a.toggleSidebar() })},
+				{Label: "Toggle Sidebar", Accelerator: "CmdOrCtrl+Shift+L", Click: act(func(a *app) { a.toggleSidebar() })},
 				{Label: "Toggle Agent Chat", Accelerator: "CmdOrCtrl+Shift+A", Click: act(func(a *app) { a.toggleChat() })},
 				{Label: "Command Palette", Accelerator: "CmdOrCtrl+Shift+P", Click: act(func(a *app) { a.paletteOpen = true })},
 				mygo.Separator(),
