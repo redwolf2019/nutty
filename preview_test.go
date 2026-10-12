@@ -125,7 +125,7 @@ func TestStripToggles(t *testing.T) {
 		root:    &node{term: p},
 		panes:   []*pane{p},
 	}
-	render := func(name string, layout string) {
+	render := func(name string, layout string, hover bool) {
 		a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
 		a.settings.WindowLayout = layout
 		a.sessions = []*session{s}
@@ -134,6 +134,11 @@ func TestStripToggles(t *testing.T) {
 		a.sel = sessionID(1)
 		tt := ui.NewTester(a.view, 1280, 780)
 		tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})
+		// The toggles reveal on hover over the strip's right end, as
+		// otty's do; render one hovered shot to see them.
+		if hover {
+			tt.Move(1250, 15)
+		}
 		f, err := os.Create("/tmp/nutty-" + name + ".png")
 		if err != nil {
 			t.Fatal(err)
@@ -145,9 +150,10 @@ func TestStripToggles(t *testing.T) {
 		f.Close()
 		t.Log("wrote /tmp/nutty-" + name + ".png")
 	}
-	render("strip-toggles-sidebar", "sidebar-left")
-	render("strip-toggles-tabs-top", "tabs-top")
-	render("strip-toggles-tabs-bottom", "tabs-bottom")
+	render("strip-toggles-sidebar", "sidebar-left", false)
+	render("strip-toggles-sidebar-hover", "sidebar-left", true)
+	render("strip-toggles-tabs-top-hover", "tabs-top", true)
+	render("strip-toggles-tabs-bottom-hover", "tabs-bottom", true)
 }
 
 // TestInfoTabs renders the right panel's three sections that load real
