@@ -46,15 +46,17 @@ func (a *app) topstrip(c *ui.Context) {
 			})
 		})
 
-		// The right surface column's toolbar, always there — the rail and
-		// panel toggles live in it whether or not a panel is open.
+		// The right surface column: its toolbar when a panel is open, and
+		// the bare column otherwise — the info panel's toggle floats at the
+		// corner of the middle panel then.
 		switch a.panel {
 		case panelInfo:
 			a.infoToolbar(c)
 		case panelChat:
 			a.chatToolbar(c)
 		default:
-			a.noneToolbar(c)
+			ui.Box(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
+				BorderWidth(0, 0, 0, 1).BorderColor(t.Border)
 		}
 	})
 }
@@ -142,25 +144,6 @@ func (a *app) chatToolbar(c *ui.Context) {
 				if cl.Clicked() {
 					a.setPanel(panelNone)
 				}
-			})
-		})
-	}
-}
-
-// noneToolbar is the strip's right column when no panel is open, with the
-// info panel's toggle. The column is always there but the icon appears
-// only on hover, so the empty surface does not read as chrome.
-func (a *app) noneToolbar(c *ui.Context) {
-	t := c.Theme()
-	box := ui.Box(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
-		BorderWidth(0, 0, 0, 1).BorderColor(t.Border)
-	if box.Hovered() {
-		box.Children(func() {
-			ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
-				ui.Box(c).Grow(1)
-				a.iconButton(c, "toolbar-panel-open", lucide.PanelRightOpen(), "Info panel", func() {
-					a.setPanel(panelInfo)
-				})
 			})
 		})
 	}

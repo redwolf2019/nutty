@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/egoist/mygo/ui"
+	"github.com/oneo-me/onevra/source/icons/lucide"
 	"github.com/smallnest/uix/components/command"
 )
 
@@ -20,6 +21,7 @@ func (a *app) view(c *ui.Context) {
 			}
 			ui.Box(c).Grow(1).MinWidth(0).FillHeight().Clip().Children(func() {
 				a.contentView(c)
+				a.cornerToggles(c)
 			})
 			switch a.panel {
 			case panelInfo:
@@ -42,6 +44,36 @@ func (a *app) view(c *ui.Context) {
 		State: &a.palette,
 		Items: a.paletteItems(),
 	})
+}
+
+// cornerToggles float at the top corners of the middle panel, the two
+// places a hidden side can be brought back with the mouse: the rail's
+// toggle at the left, the info panel's at the right. Each shows only
+// while its side is hidden, so it never covers an open panel.
+func (a *app) cornerToggles(c *ui.Context) {
+	t := c.Theme()
+	if !a.sideOpen {
+		b := ui.ButtonBase(c.Key("corner-rail")).Padding(5).Radius(t.Radius).
+			FocusRing(false).Tooltip("Toggle sidebar")
+		b.Absolute().Top(8).Left(8).Background(t.Surface).BorderWidth(1).BorderColor(t.Border)
+		b.Children(func() {
+			ui.Image(c, lucide.PanelLeftOpen()).Size(15, 15)
+		})
+		if b.Clicked() {
+			a.toggleSidebar()
+		}
+	}
+	if a.panel == panelNone {
+		b := ui.ButtonBase(c.Key("corner-info")).Padding(5).Radius(t.Radius).
+			FocusRing(false).Tooltip("Info panel")
+		b.Absolute().Top(8).Right(8).Background(t.Surface).BorderWidth(1).BorderColor(t.Border)
+		b.Children(func() {
+			ui.Image(c, lucide.PanelRightOpen()).Size(15, 15)
+		})
+		if b.Clicked() {
+			a.setPanel(panelInfo)
+		}
+	}
 }
 
 // contentView draws the active session's pane tree, or a gentle empty

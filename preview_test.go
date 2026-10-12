@@ -98,6 +98,56 @@ func TestSnapshot(t *testing.T) {
 	}
 }
 
+// TestCorners renders the floating toggles that reopen a hidden rail or
+// panel, in the three states they appear in: NUTTY_SNAPSHOT=1 go test
+// -run TestCorners.
+func TestCorners(t *testing.T) {
+	if os.Getenv("NUTTY_SNAPSHOT") == "" {
+		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
+	}
+	registerFonts()
+	lt, dt := ottyTermTheme(false), ottyTermTheme(true)
+	term, err := terminal.New(terminal.Options{
+		Conn:      &scriptConn{data: []byte(previewScript)},
+		Font:      (&app{settings: defaultSettings()}).termFont(),
+		Theme:     lt,
+		DarkTheme: dt,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &pane{term: term}
+	s := &session{
+		id: 1, title: "preview", dir: "/Users/smallnest/ai/nutty",
+		started: time.Now().Add(-73 * time.Second),
+		root:    &node{term: p},
+		panes:   []*pane{p},
+	}
+	render := func(name string, sideOpen bool, panel panelMode) {
+		a := &app{settings: defaultSettings(), sideOpen: sideOpen, agent: &demoAgent{}}
+		a.sessions = []*session{s}
+		a.active = 0
+		a.activePane = p
+		a.sel = sessionID(1)
+		a.panel = panel
+		tt := ui.NewTester(a.view, 1280, 780)
+		tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})
+		f, err := os.Create("/tmp/nutty-" + name + ".png")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := png.Encode(f, tt.Image()); err != nil {
+			f.Close()
+			t.Fatal(err)
+		}
+		f.Close()
+		t.Log("wrote /tmp/nutty-" + name + ".png")
+	}
+	render("corners-both", false, panelNone)
+	render("corners-left", false, panelInfo)
+	render("corners-right", true, panelNone)
+}
+
 // TestSettingsSnapshot renders the Settings window for a visual check.
 func TestSettingsSnapshot(t *testing.T) {
 	if os.Getenv("NUTTY_SNAPSHOT") == "" {
