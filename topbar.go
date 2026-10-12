@@ -46,11 +46,11 @@ func (a *app) topstrip(c *ui.Context) {
 			})
 		})
 
-		// The toggles that hide the sessions (the tab bar or the rail) and
-		// open the info panel sit at the strip's right end, at the title's
-		// height, in every layout, as otty shows them in the title strip.
+		// The toggles that hide the tab bar and open the info panel sit at
+		// the strip's right end, at the title's height, in every layout.
 		// The Sidebar layout shows the right panel's toolbar when a panel
-		// is open, and the toggles otherwise.
+		// is open and the info panel's toggle otherwise; hiding the rail is
+		// the TABS header's own toggle, so the strip does not repeat it.
 		switch {
 		case a.settings.WindowLayout != "sidebar-left":
 			a.stripControls(c)
@@ -84,18 +84,15 @@ func (a *app) stripControls(c *ui.Context) {
 }
 
 // sidebarStripToggles is the right end of the Sidebar layout's strip while
-// no panel is open: the toggles that hide the sessions rail and open the
-// info panel, at the title's height. An open panel's toolbar lives there
-// instead.
+// no panel is open: the toggle that opens the info panel, at the title's
+// height. Hiding the sessions rail is the TABS header's own toggle, so it
+// is not repeated here; an open panel's toolbar lives here instead.
 func (a *app) sidebarStripToggles(c *ui.Context) {
 	t := c.Theme()
 	ui.Box(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
 			ui.Row(c).FillHeight().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
 				ui.Box(c).Grow(1)
-				a.iconButton(c, "strip-rail", lucide.PanelLeftClose(), "Toggle sidebar", func() {
-					a.toggleSidebar()
-				})
 				a.iconButton(c, "strip-panel", lucide.PanelRightOpen(), "Info panel", func() {
 					a.toggleInfo()
 				})
