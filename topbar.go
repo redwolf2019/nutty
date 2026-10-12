@@ -27,10 +27,16 @@ func (a *app) topstrip(c *ui.Context) {
 	bar := c.TitleBar()
 	ui.Row(c).FillWidth().Shrink(0).Height(44).DragWindow().Children(func() {
 		if a.sideOpen && a.settings.WindowLayout == "sidebar-left" {
-			// The rail's column continues through the strip: its surface
-			// and its right border, empty under the traffic lights.
-			ui.Box(c).Width(a.sidebarWidth()).FillHeight().Shrink(0).Background(t.Surface).
+			// The rail's column continues through the strip: its surface and
+			// its right border, with a new-tab button and the rail's toggle
+			// near its right edge, revealed on hover, as otty draws them.
+			rail := ui.Box(c).Width(a.sidebarWidth()).FillHeight().Shrink(0).Background(t.Surface).
 				BorderWidth(0, 1, 0, 0).BorderColor(t.Border)
+			if rail.Hovered() {
+				rail.Children(func() {
+					a.railStripToggles(c)
+				})
+			}
 		} else {
 			// Without the rail the traffic lights sit over the title.
 			ui.Box(c).Width(bar.Left + 6).Shrink(0)
@@ -46,12 +52,11 @@ func (a *app) topstrip(c *ui.Context) {
 			})
 		})
 
-		// The toggles that hide the sessions (the tab bar or the rail) and
-		// open the info panel sit at the strip's right end, at the title's
-		// height, in every layout. They are hidden until the pointer is
-		// over the strip's right end, as otty reveals its controls there.
-		// The Sidebar layout shows the right panel's toolbar when a panel
-		// is open and the two toggles otherwise.
+		// The strip's hidden controls, as otty reveals them: a new-tab
+		// button and the sessions toggle at the left, over the rail, and
+		// the tab bar's or the rail's hide toggle with the info panel's
+		// toggle at the right. All sit at the title's height and appear
+		// only while the pointer is over the strip.
 		switch {
 		case a.settings.WindowLayout != "sidebar-left":
 			a.stripControls(c)
@@ -79,11 +84,11 @@ func (a *app) stripControls(c *ui.Context) {
 		box.Children(func() {
 			ui.Row(c).FillHeight().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
 				ui.Box(c).Grow(1)
-				a.iconButton(c, "tabbar-toggle", lucide.PanelLeftClose(), "Toggle tabs", func() {
+				a.stripButton(c, "tabbar-toggle", lucide.PanelLeft(), 12, "Toggle tabs", func() {
 					a.toggleSidebar()
 				})
 				if a.panel == panelNone {
-					a.iconButton(c, "strip-panel", lucide.PanelRightOpen(), "Info panel", func() {
+					a.stripButton(c, "strip-panel", lucide.PanelRight(), 12, "Info panel", func() {
 						a.toggleInfo()
 					})
 				}
@@ -93,10 +98,10 @@ func (a *app) stripControls(c *ui.Context) {
 }
 
 // sidebarStripToggles is the right end of the Sidebar layout's strip while
-// no panel is open: the toggles that hide the sessions rail and open the
-// info panel, at the title's height. Like otty's title-strip controls they
-// appear only while the pointer is over the right end; the rail keeps its
-// own copy of the hide toggle, as otty draws both. An open panel's toolbar
+// no panel is open: the toggle that opens the info panel, at the title's
+// height. Like otty's title-strip controls it appears only while the
+// pointer is over the right end; hiding the rail is the strip's left pair,
+// next to the new-tab button, as otty draws them. An open panel's toolbar
 // lives here instead.
 func (a *app) sidebarStripToggles(c *ui.Context) {
 	t := c.Theme()
@@ -106,14 +111,40 @@ func (a *app) sidebarStripToggles(c *ui.Context) {
 		box.Children(func() {
 			ui.Row(c).FillHeight().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
 				ui.Box(c).Grow(1)
-				a.iconButton(c, "strip-rail", lucide.PanelLeftClose(), "Toggle sidebar", func() {
-					a.toggleSidebar()
-				})
-				a.iconButton(c, "strip-panel", lucide.PanelRightOpen(), "Info panel", func() {
+				a.stripButton(c, "strip-panel", lucide.PanelRight(), 12, "Info panel", func() {
 					a.toggleInfo()
 				})
 			})
 		})
+	}
+}
+
+// railStripToggles is the left end of the Sidebar layout's strip, over the
+// sessions rail: a new-tab button and the toggle that hides the rail, at
+// the title's height and near the rail's right edge, as otty shows them.
+// They appear only while the pointer is over the rail's column.
+func (a *app) railStripToggles(c *ui.Context) {
+	ui.Row(c).FillHeight().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
+		ui.Box(c).Grow(1)
+		a.stripButton(c, "strip-newtab", lucide.Plus(), 11, "New tab", func() {
+			a.newTab()
+		})
+		a.stripButton(c, "strip-rail", lucide.PanelLeft(), 12, "Toggle sidebar", func() {
+			a.toggleSidebar()
+		})
+	})
+}
+
+// stripButton is a bare icon button of the title strip, at the small size
+// otty draws its strip controls.
+func (a *app) stripButton(c *ui.Context, key string, icon *ui.SVG, size float32, tip string, onClick func()) {
+	t := c.Theme()
+	b := ui.ButtonBase(c.Key(key)).Padding(4, 4).Radius(t.Radius).FocusRing(false).Tooltip(tip)
+	b.Children(func() {
+		ui.Image(c, icon).Size(size, size)
+	})
+	if b.Clicked() {
+		onClick()
 	}
 }
 
