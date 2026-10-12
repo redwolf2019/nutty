@@ -9,6 +9,7 @@ import (
 
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
+	"github.com/smallnest/uix/components/tree"
 )
 
 // scriptConn is a read-only terminal source for previews: the terminal
@@ -146,6 +147,121 @@ func TestCorners(t *testing.T) {
 	render("corners-both", false, panelNone)
 	render("corners-left", false, panelInfo)
 	render("corners-right", true, panelNone)
+}
+
+// TestInfoTabs renders the right panel's three sections that load real
+// data, with sample state seeded in place of a live session: NUTTY_SNAPSHOT=1
+// go test -run TestInfoTabs. The loaders no-op without a window, so the
+// renders show exactly what the seeded data draws.
+func TestInfoTabs(t *testing.T) {
+	if os.Getenv("NUTTY_SNAPSHOT") == "" {
+		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
+	}
+	registerFonts()
+	lt, dt := ottyTermTheme(false), ottyTermTheme(true)
+	term, err := terminal.New(terminal.Options{
+		Conn:      &scriptConn{data: []byte(previewScript)},
+		Font:      (&app{settings: defaultSettings()}).termFont(),
+		Theme:     lt,
+		DarkTheme: dt,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &pane{term: term}
+	s := &session{
+		id: 1, title: "preview", dir: "/Users/smallnest/ai/nutty",
+		started: time.Now().Add(-73 * time.Second),
+		root:    &node{term: p},
+		panes:   []*pane{p},
+	}
+	render := func(name string, a *app, dark bool) {
+		tt := ui.NewTester(a.view, 1280, 780)
+		tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})
+		tt.SetDark(dark)
+		// Rest the pointer over the toolbar so its icons show, as the site
+		// shots do.
+		tt.Move(1170, 15)
+		f, err := os.Create("/tmp/nutty-" + name + ".png")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := png.Encode(f, tt.Image()); err != nil {
+			f.Close()
+			t.Fatal(err)
+		}
+		f.Close()
+		t.Log("wrote /tmp/nutty-" + name + ".png")
+	}
+	base := func() *app {
+		a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+		a.sessions = []*session{s}
+		a.active = 0
+		a.activePane = p
+		a.sel = sessionID(1)
+		a.panel = panelInfo
+		return a
+	}
+	open := true
+	render("outline", func() *app {
+		a := base()
+		a.info = infoState{
+			tab:         infoTabOutline,
+			outline:     []string{"git commit -m \"outline marks\"", "npm run dev", "ls -la", "cd web-app"},
+			outlineDone: true,
+		}
+		return a
+	}(), false)
+	render("git", func() *app {
+		a := base()
+		a.info = infoState{
+			tab: infoTabGit,
+			git: gitState{
+				branch:  "main",
+				changes: []gitChange{{" M", "session.go"}, {"M ", "topbar.go"}, {"??", "settings.go"}, {"A ", "info.go"}},
+				done:    true,
+			},
+		}
+		return a
+	}(), false)
+	render("git-diff", func() *app {
+		a := base()
+		a.info = infoState{
+			tab: infoTabGit,
+			git: gitState{
+				branch:  "main",
+				changes: []gitChange{{" M", "session.go"}, {"??", "settings.go"}},
+				done:    true,
+				diffOpen: "session.go",
+				diffLines: []string{
+					"--- a/session.go",
+					"+++ b/session.go",
+					"@@ -1,4 +1,5 @@",
+					" func (a *app) renderPane(c *ui.Context) {",
+					"+	a.win.SetTitle(\"rendered\")",
+					"-	return nil",
+				},
+			},
+		}
+		return a
+	}(), false)
+	render("files", func() *app {
+		a := base()
+		a.info = infoState{
+			tab: infoTabFiles,
+			files: []tree.Item{
+				{Label: "assets", Open: &open, Children: []tree.Item{
+					{Label: "nutty.svg"},
+					{Label: "JetBrainsMono.ttf"},
+				}},
+				{Label: "main.go"},
+				{Label: "session.go"},
+				{Label: "themes.go"},
+			},
+			filesDone: true,
+		}
+		return a
+	}(), false)
 }
 
 // TestSettingsSnapshot renders the Settings window for a visual check.

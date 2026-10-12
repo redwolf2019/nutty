@@ -79,11 +79,12 @@ func (a *app) titleText() string {
 }
 
 // infoToolbar is the right panel's mode switch, as otty shows it above
-// the info panel: an "Info" pill and icons for the outline, git, files
-// and panel toggles. Our clone only implements the info and chat panels,
-// so the extra icons switch back to the info panel and the panel toggle
-// shows or hides it. The column itself is always there; the icons appear
-// only when the pointer is over it, as otty reveals its toolbar.
+// the info panel: an "Info" pill and icons for the outline, git and files
+// sections, then the panel toggle. The open section is highlighted; the
+// pill's click closes the panel when the Info section is open, and the
+// panel toggle shows or hides it. The column itself is always there; the
+// icons appear only when the pointer is over it, as otty reveals its
+// toolbar.
 func (a *app) infoToolbar(c *ui.Context) {
 	t := c.Theme()
 	box := ui.Box(c).Width(220).FillHeight().Shrink(0).Background(t.Surface).
@@ -93,7 +94,7 @@ func (a *app) infoToolbar(c *ui.Context) {
 			ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
 				pill := ui.ButtonBase(c.Key("toolbar-info")).Padding(5, 9).
 					Radius(999).FocusRing(false).Tooltip("Info")
-				if a.panel == panelInfo {
+				if a.info.tab == infoTabInfo {
 					pill.Background(t.SurfaceHover)
 				}
 				pill.Children(func() {
@@ -103,23 +104,38 @@ func (a *app) infoToolbar(c *ui.Context) {
 					})
 				})
 				if pill.Clicked() {
-					a.toggleInfo()
+					if a.info.tab == infoTabInfo {
+						a.toggleInfo()
+					} else {
+						a.setInfoTab(infoTabInfo)
+					}
 				}
-				a.iconButton(c, "toolbar-outline", lucide.List(), "Outline", func() {
-					a.setPanel(panelInfo)
-				})
-				a.iconButton(c, "toolbar-git", lucide.GitBranch(), "Git", func() {
-					a.setPanel(panelInfo)
-				})
-				a.iconButton(c, "toolbar-files", lucide.Folder(), "Files", func() {
-					a.setPanel(panelInfo)
-				})
+				a.tabButton(c, "toolbar-outline", lucide.List(), "Outline", infoTabOutline)
+				a.tabButton(c, "toolbar-git", lucide.GitBranch(), "Git", infoTabGit)
+				a.tabButton(c, "toolbar-files", lucide.Folder(), "Files", infoTabFiles)
 				ui.Box(c).Grow(1)
 				a.iconButton(c, "toolbar-panel", lucide.PanelRightClose(), "Toggle panel", func() {
 					a.toggleInfo()
 				})
 			})
 		})
+	}
+}
+
+// tabButton is a toolbar icon that opens one section of the info panel,
+// highlighted while that section is the one shown.
+func (a *app) tabButton(c *ui.Context, key string, icon *ui.SVG, tip string, tab infoTab) {
+	t := c.Theme()
+	b := ui.ButtonBase(c.Key(key)).Padding(5, 5).Radius(t.Radius).
+		FocusRing(false).Tooltip(tip)
+	if a.info.tab == tab {
+		b.Background(t.SurfaceHover)
+	}
+	b.Children(func() {
+		ui.Image(c, icon).Size(15, 15)
+	})
+	if b.Clicked() {
+		a.setInfoTab(tab)
 	}
 }
 

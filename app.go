@@ -232,11 +232,11 @@ func (a *app) toggleSidebar() {
 }
 
 // setPanel shows one right panel or none; opening the info panel starts
-// its port scan.
+// the load of the section that is open.
 func (a *app) setPanel(p panelMode) {
 	a.panel = p
 	if p == panelInfo {
-		a.loadPorts()
+		a.loadInfoTab()
 	}
 }
 
