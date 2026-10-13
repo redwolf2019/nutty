@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -153,7 +154,7 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 				}
 			})
 		},
-		OpenLink: a.openLink,
+		OpenLink: func(link string) bool { return a.openLink(p, link) },
 	})
 	if err != nil {
 		// Without its library the terminal cannot run; show the pane as
@@ -354,13 +355,55 @@ func sessionAllDead(s *session) bool {
 
 // openLink opens a file path the terminal printed, reporting whether it
 // did; URLs open with the system on their own.
-func (a *app) openLink(link string) bool {
-	link = strings.TrimPrefix(link, "file://")
-	if _, err := os.Stat(link); err == nil {
-		_ = exec.Command("open", link).Start()
-		return true
+func (a *app) openLink(p *pane, link string) bool {
+	// A relative path is the program's: it starts at the directory the
+	// pane's shell reported, or the session's when it reported none.
+	dir := ""
+	if p != nil && p.term != nil {
+		dir = p.term.Dir()
 	}
-	return false
+	if s := a.sessionOf(p); s != nil && dir == "" {
+		dir = s.dir
+	}
+	path := linkPath(link, dir)
+	if path == "" {
+		return false
+	}
+	openFile(path)
+	return true
+}
+
+// openFile opens a file with the system, a seam for tests that must not.
+// It waits for the child, which a bare Start would leave a zombie for as
+// long as the app runs.
+var openFile = func(path string) {
+	go func() { _ = exec.Command("open", path).Run() }()
+}
+
+// lineSuffix is the :line or :line:col a compiler or grep prints after a
+// file's name.
+var lineSuffix = regexp.MustCompile(`:\d+(?::\d+)?$`)
+
+// linkPath is the file a path the terminal printed names, or "" when
+// there is none. The terminal passes the path as printed: from ~, relative
+// to the program's directory dir, and with a :line:col suffix included, so
+// each is resolved before the file is looked for; the app's own working
+// directory is the wrong start for a relative one.
+func linkPath(link, dir string) string {
+	link = strings.TrimPrefix(link, "file://")
+	// As printed first, for the rare file whose name ends in :digits.
+	for _, name := range []string{link, lineSuffix.ReplaceAllString(link, "")} {
+		switch {
+		case name == "~" || strings.HasPrefix(name, "~/"):
+			name = filepath.Join(homeDir(), name[1:])
+		case !filepath.IsAbs(name):
+			name = filepath.Join(dir, name)
+		}
+		if _, err := os.Stat(name); err == nil {
+			return name
+		}
+	}
+	return ""
 }
 
 func homeDir() string {
