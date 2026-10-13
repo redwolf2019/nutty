@@ -23,25 +23,24 @@ func TestLangStates(t *testing.T) {
 	}
 }
 
-// TestTrRoundTrip checks that translated strings come back untranslated
-// in English, so a value persisted through Tr still round-trips.
-func TestTrRoundTrip(t *testing.T) {
-	SetLang("chinese")
-	for en, zh := range map[string]string{
+// TestTrBothLanguages checks the same keys in both languages: Chinese
+// gives the table's entry and English the key itself. Tr has no reverse
+// lookup, so a translated string never comes back as its key, which is
+// why nothing persisted goes through Tr.
+func TestTrBothLanguages(t *testing.T) {
+	keys := map[string]string{
 		"New Tab":       "新建标签页",
 		"Follow system": "跟随系统",
 		"Close Tab?":    "关闭标签页？",
-	} {
+	}
+	SetLang("chinese")
+	for en, zh := range keys {
 		if got := Tr(en); got != zh {
 			t.Errorf("Tr(%q) = %q, want %q", en, got, zh)
 		}
 	}
 	SetLang("english")
-	for en := range map[string]string{
-		"New Tab":       "新建标签页",
-		"Follow system": "跟随系统",
-		"Close Tab?":    "关闭标签页？",
-	} {
+	for en := range keys {
 		if got := Tr(en); got != en {
 			t.Errorf("english Tr(%q) = %q, want %q", en, got, en)
 		}
