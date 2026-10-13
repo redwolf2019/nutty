@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -618,12 +617,16 @@ func (a *app) loadFiles() {
 	}
 	a.info.files = nil
 	a.info.filesDone = false
+	// The session and its directory belong to the UI thread: read them here,
+	// not in the walk.
+	s := a.currentSession()
+	dir := ""
+	if s != nil {
+		dir = s.dir
+	}
 	go func() {
-		s := a.currentSession()
-		dir := ""
 		var items []tree.Item
 		if s != nil {
-			dir = s.dir
 			nodes := 0
 			items = buildFileTree(dir, 0, &nodes)
 		}
@@ -696,7 +699,7 @@ func (a *app) infoFilesView(c *ui.Context) {
 			ui.Text(c, tr("No files")).TextColor(t.TextMuted)
 			return
 		}
-		a.fileTree(c, a.info.files, 0)
+		a.fileTree(c, a.info.files, "", 0)
 	})
 }
 
@@ -704,12 +707,15 @@ func (a *app) infoFilesView(c *ui.Context) {
 // a chevron and a folder icon, opens and closes when clicked, and nests
 // its children one indent in; a file shows a file icon and opens on a
 // click. The open state lives on the items' Open pointers, as the tree
-// component's does.
-func (a *app) fileTree(c *ui.Context, items []tree.Item, depth int) {
+// component's does. Every level draws into one column, so a row's key is
+// its path under parent: a depth and an index would be shared by the
+// children of two open folders.
+func (a *app) fileTree(c *ui.Context, items []tree.Item, parent string, depth int) {
 	t := c.Theme()
-	for i, it := range items {
+	for _, it := range items {
 		dir := it.Open != nil
-		b := ui.ButtonBase(c.Key(fmt.Sprintf("file-%d-%d", depth, i))).
+		path := parent + "/" + it.Label
+		b := ui.ButtonBase(c.Key("file-"+path)).
 			FillWidth().Padding(4, 0, 4, 4+float32(depth)*12).Radius(t.Radius).FocusRing(false)
 		if b.Hovered() {
 			b.Background(t.SurfaceHover)
@@ -743,7 +749,7 @@ func (a *app) fileTree(c *ui.Context, items []tree.Item, depth int) {
 			}
 		}
 		if dir && *it.Open {
-			a.fileTree(c, it.Children, depth+1)
+			a.fileTree(c, it.Children, path, depth+1)
 		}
 	}
 }
