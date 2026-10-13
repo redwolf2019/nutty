@@ -79,6 +79,31 @@ func TestSettingsNormalize(t *testing.T) {
 	}
 }
 
+// TestNormalizeColors checks that a color the file holds that is not hex
+// is dropped, so ui.Hex does not panic on it when the theme is built, and
+// that the hex ones stay.
+func TestNormalizeColors(t *testing.T) {
+	s := LoadFrom([]byte(`{
+		"Foreground": "red",
+		"Background": "#12345",
+		"CursorColor": "#1a2B3c",
+		"Selection": "abc",
+		"Palette": ["#fff", "rgb(0,0,0)", "#GGGGGG", "#11223344"]
+	}`))
+	if s == nil {
+		t.Fatal("the file did not load")
+	}
+	if s.Foreground != "" || s.Background != "" || s.Palette[1] != "" || s.Palette[2] != "" {
+		t.Errorf("invalid colors kept: %q %q %q %q", s.Foreground, s.Background, s.Palette[1], s.Palette[2])
+	}
+	for _, c := range []string{s.CursorColor, s.Selection, s.Palette[0], s.Palette[3]} {
+		if c == "" {
+			t.Fatal("a valid color was dropped")
+		}
+		ui.Hex(c) // panics on a color Normalize should have dropped
+	}
+}
+
 // TestThemeNames checks the theme lists the settings select from.
 func TestThemeNames(t *testing.T) {
 	names := ThemeNames()
