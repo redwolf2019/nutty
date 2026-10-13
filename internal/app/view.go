@@ -27,10 +27,16 @@ func (a *app) view(c *ui.Context) {
 
 	a.renameDialog(c)
 	a.confirmDialog(c)
+	// The commands are built only while the palette shows them, not for
+	// every frame of a terminal's output.
+	var items []command.Item
+	if a.paletteOpen {
+		items = a.paletteItems()
+	}
 	command.Command(c, command.Props{
 		Open:  &a.paletteOpen,
 		State: &a.palette,
-		Items: a.paletteItems(),
+		Items: items,
 	})
 	// The terminals above have read this frame's output; follow the shell
 	// into a directory it reports, so the tab, the title and the info

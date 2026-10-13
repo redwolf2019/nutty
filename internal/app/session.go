@@ -27,8 +27,8 @@ type session struct {
 	panes   []*pane
 }
 
-// displayTitle is what the tab shows: the user's name when set, else the
-// shell's title, else the shell's name.
+// displayTitle is the session's title: the user's name when set, else the
+// shell's title, else the shell's name. The tabs show tabLabel instead.
 func (s *session) displayTitle() string {
 	if s.name != "" {
 		return s.name
@@ -143,7 +143,6 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 		OnTitle: func(title string) {
 			a.win.Update(func() {
 				s.title = title
-				a.refreshTitle()
 			})
 		},
 		OnExit: func(code int) {
@@ -315,10 +314,6 @@ func (s *session) removePane(p *pane) {
 			return true
 		}
 		return rec(n.split.a) || rec(n.split.b)
-	}
-	if s.root.term == p {
-		s.root = &node{}
-		return
 	}
 	rec(s.root)
 	s.panes = collectPanes(s.root)

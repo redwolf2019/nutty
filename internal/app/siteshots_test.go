@@ -59,7 +59,6 @@ func TestSiteShots(t *testing.T) {
 		a.sessions = []*session{s}
 		a.active = 0
 		a.activePane = p
-		a.sel = sessionID(1)
 		a.panel = panel
 		a.info = infoState{ports: []string{"5173", "8000"}, portsDone: true}
 		a.chat.msgs = siteChat

@@ -126,7 +126,7 @@ func TestPaletteItems(t *testing.T) {
 		"New Tab",
 		"Split Right",
 		"Toggle Agent Chat",
-		"Switch to " + s.displayTitle(),
+		"Switch to " + tabLabel(s),
 		"Theme: Tokyo Night",
 		"Theme: Follow system",
 	} {

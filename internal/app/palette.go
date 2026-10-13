@@ -46,7 +46,7 @@ func (a *app) paletteItems() []command.Item {
 	for _, s := range a.sessions {
 		s := s
 		items = append(items, command.Item{
-			Label:    tr("Switch to ") + s.displayTitle(),
+			Label:    tr("Switch to ") + tabLabel(s),
 			Keywords: []string{"session", "tab", s.dir},
 			Icon:     lucide.Terminal(),
 			OnSelect: func() { a.activate(s) },

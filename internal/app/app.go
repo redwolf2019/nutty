@@ -38,7 +38,6 @@ type app struct {
 	paletteOpen bool
 	palette     command.State
 
-	sel    string // the rail's chosen session id
 	rename renameState
 
 	settings     *settings.Settings
@@ -148,7 +147,6 @@ func (a *app) activate(s *session) {
 	}
 	a.active = idx
 	a.activePane = s.panes[0]
-	a.sel = sessionID(s.id)
 	a.refreshTitle()
 	// The info panel follows the active session, whose Git and Files
 	// sections hold the session's working directory; mark them stale.
@@ -224,7 +222,6 @@ func (a *app) closeSession(s *session) {
 	if len(a.sessions) == 0 {
 		a.active = 0
 		a.activePane = nil
-		a.sel = ""
 		a.refreshTitle()
 		return
 	}
