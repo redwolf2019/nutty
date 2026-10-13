@@ -1,6 +1,8 @@
 package app
 
 import (
+	"strconv"
+
 	"nutty/internal/settings"
 
 	"github.com/egoist/mygo"
@@ -13,8 +15,23 @@ import (
 // so each window keeps its own sessions. Edit roles go to the focused
 // control, so a terminal gets its copy and paste.
 func setAppMenu(s *settings.Settings) {
+	mygo.App.SetMenu(mygo.NewMenu(menuItems(s)))
+}
+
+// menuItems are the items of the application menu, for setAppMenu.
+func menuItems(s *settings.Settings) []*mygo.MenuItem {
 	acc := func(action string) string { return menuAccel(s, action) }
-	menu := mygo.NewMenu([]*mygo.MenuItem{
+	// The tabs by their place, as otty's goto_tab:1 to goto_tab:9 choose
+	// them with Cmd+1 to Cmd+9.
+	var tabs []*mygo.MenuItem
+	for n := 1; n <= 9; n++ {
+		tabs = append(tabs, &mygo.MenuItem{
+			Label:       tr("Tab " + strconv.Itoa(n)),
+			Accelerator: acc("goto_tab:" + strconv.Itoa(n)),
+			Click:       act(func(a *app) { a.gotoTab(n) }),
+		})
+	}
+	return []*mygo.MenuItem{
 		{
 			Label: "Nutty",
 			Submenu: []*mygo.MenuItem{
@@ -60,6 +77,7 @@ func setAppMenu(s *settings.Settings) {
 			Label: tr("View"),
 			Submenu: []*mygo.MenuItem{
 				{Label: tr("Toggle Sidebar"), Accelerator: acc("toggle_tabs_panel"), Click: act(func(a *app) { a.toggleSidebar() })},
+				{Label: tr("Toggle Details Panel"), Accelerator: acc("toggle_details_panel"), Click: act(func(a *app) { a.toggleInfo() })},
 				{Label: tr("Toggle Agent Chat"), Accelerator: acc("open_agent"), Click: act(func(a *app) { a.toggleChat() })},
 				{Label: tr("Command Palette"), Accelerator: acc("command_palette"), Click: act(func(a *app) { a.paletteOpen = true })},
 				mygo.Separator(),
@@ -67,7 +85,7 @@ func setAppMenu(s *settings.Settings) {
 				{Label: tr("Decrease Font Size"), Accelerator: acc("decrease_font_size"), Click: act(func(a *app) { a.zoomFont(-1) })},
 				{Label: tr("Reset Font Size"), Accelerator: acc("reset_font_size"), Click: act(func(a *app) { a.resetFont() })},
 				mygo.Separator(),
-				{Role: mygo.RoleToggleFullScreen},
+				{Role: mygo.RoleToggleFullScreen, Accelerator: acc("toggle_full_screen")},
 			},
 		},
 		{
@@ -76,6 +94,7 @@ func setAppMenu(s *settings.Settings) {
 				{Label: tr("Rename Tab…"), Accelerator: acc("rename_tab"), Click: act(func(a *app) { a.beginRename() })},
 				{Label: tr("Split Right"), Accelerator: acc("split_right"), Click: act(func(a *app) { a.splitRight() })},
 				{Label: tr("Split Down"), Accelerator: acc("split_down"), Click: act(func(a *app) { a.splitDown() })},
+				{Label: tr("Close Pane"), Accelerator: acc("close_pane"), Click: act(func(a *app) { a.closePane(a.activePane) })},
 				mygo.Separator(),
 				{Label: tr("Clear Screen"), Accelerator: acc("clear_screen"), Click: act(func(a *app) { a.clearScreen() })},
 				{Label: tr("Copy Path"), Accelerator: acc("copy_path"), Click: act(func(a *app) { a.copyPath() })},
@@ -84,18 +103,27 @@ func setAppMenu(s *settings.Settings) {
 		{
 			Label: tr("Window"),
 			Submenu: []*mygo.MenuItem{
-				{Role: mygo.RoleMinimize},
+				{Role: mygo.RoleMinimize, Accelerator: acc("minimize")},
 				{Role: mygo.RoleZoom},
 				mygo.Separator(),
 				{Label: tr("Next Tab"), Accelerator: acc("next_tab"), Click: act(func(a *app) { a.nextTab() })},
 				{Label: tr("Previous Tab"), Accelerator: acc("previous_tab"), Click: act(func(a *app) { a.prevTab() })},
 				{Label: tr("Focus Next Pane"), Accelerator: acc("focus_next_pane"), Click: act(func(a *app) { a.focusNextPane() })},
 				{Label: tr("Focus Previous Pane"), Accelerator: acc("focus_previous_pane"), Click: act(func(a *app) { a.focusPrevPane() })},
+				mygo.Separator(),
+				{Label: tr("Tabs"), Submenu: tabs},
 			},
 		},
 		{Role: mygo.RoleHelp},
-	})
-	mygo.App.SetMenu(menu)
+	}
+}
+
+// gotoTab activates the nth tab, counting from 1; a place past the last
+// tab does nothing.
+func (a *app) gotoTab(n int) {
+	if n >= 1 && n <= len(a.sessions) {
+		a.activate(a.sessions[n-1])
+	}
 }
 
 // menuAccel is the menu accelerator of an action: its recorded override,
