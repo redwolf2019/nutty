@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,6 +38,8 @@ type infoState struct {
 	outlineDone bool
 	git         gitState
 	files       []tree.Item
+	filesDir    string         // the directory files lists
+	filesMore   map[string]int // the entries a long folder left out, by its row's path
 	filesDone   bool
 }
 
@@ -717,10 +720,13 @@ func diffRed(t *ui.Theme) ui.Color {
 	return ui.Hex("#b35959")
 }
 
-// loadFiles walks the working directory into the tree the Files section
-// shows, as otty's quick directory browser. The walk is capped so a large
-// tree cannot stall the panel: 600 nodes and 8 levels. Dot directories
-// and .DS_Store are skipped; a directory opens in Finder, a file in Zed.
+// loadFiles lists the working directory for the tree the Files section
+// shows, as otty's quick directory browser: its own entries only. A folder
+// of the tree is listed when it is first opened (see fileTree), so nothing
+// is walked that the user does not look at, however deep or wide the tree
+// is, and a folder never comes up empty because a bigger one beside it
+// used up a budget. Dot directories and .DS_Store are skipped; a folder
+// opens in place, a file in Zed.
 func (a *app) loadFiles() {
 	if a.win == nil {
 		return
@@ -736,9 +742,9 @@ func (a *app) loadFiles() {
 	}
 	go func() {
 		var items []tree.Item
+		more := 0
 		if s != nil {
-			nodes := 0
-			items = buildFileTree(dir, 0, &nodes)
+			items, more = listFolder(dir)
 		}
 		a.win.Update(func() {
 			// A directory changed mid-walk: the newer walk owns the panel,
@@ -746,81 +752,54 @@ func (a *app) loadFiles() {
 			if staleInfoCommit(a.currentSession(), s, dir) {
 				return
 			}
-			a.info.files = items
+			a.info.files, a.info.filesDir = items, dir
+			a.info.filesMore = map[string]int{"": more}
 			a.info.filesDone = true
 		})
 	}()
 }
 
-// fileTreeMaxNodes and fileTreeMaxDepth cap the Files walk.
-const (
-	fileTreeMaxNodes = 600
-	fileTreeMaxDepth = 8
-)
+// fileTreeMaxNodes caps the entries one folder lists. The panel draws
+// every row of the tree on each frame, so a folder of a hundred thousand
+// files must not put them all there.
+const fileTreeMaxNodes = 600
 
-// buildFileTree builds the uix tree items of dir, down to fileTreeMaxDepth
-// levels from depth. The count caps the total nodes, and the walk goes
-// level by level, so the budget is spent on the top of the tree first:
-// when it runs out, the folders further down list nothing, but no entry
-// of a level above is left out for the contents of one big folder.
-func buildFileTree(dir string, depth int, nodes *int) []tree.Item {
-	// A pending folder is one whose entries the next level lists, into the
-	// Children of its item.
-	type pending struct {
-		dir  string
-		into *[]tree.Item
+// listFolder lists one folder as the Files section shows it: its entries
+// in the order of their names, without .DS_Store and the dot directories,
+// each folder closed and not yet listed itself (nil Children). more is how
+// many entries were left out past fileTreeMaxNodes. A folder that cannot
+// be read lists nothing; the list is never nil, which is how fileTree
+// tells a folder that was listed from one that was not.
+func listFolder(dir string) (items []tree.Item, more int) {
+	items = []tree.Item{}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return items, 0
 	}
-	var root []tree.Item
-	level := []pending{{dir, &root}}
-	for ; depth < fileTreeMaxDepth && len(level) > 0; depth++ {
-		var next []pending
-		for _, p := range level {
-			if *nodes >= fileTreeMaxNodes {
-				return root
-			}
-			entries, err := os.ReadDir(p.dir)
-			if err != nil {
-				continue
-			}
-			var items []tree.Item
-			for _, e := range entries {
-				name := e.Name()
-				if name == ".DS_Store" || (e.IsDir() && strings.HasPrefix(name, ".")) {
-					continue
-				}
-				if *nodes >= fileTreeMaxNodes {
-					break
-				}
-				*nodes++
-				it := tree.Item{Label: name}
-				path := filepath.Join(p.dir, name)
-				if e.IsDir() {
-					open := false
-					it.Open = &open
-					// Wait for open in the background: a child that is never
-					// waited for stays a zombie until the app quits.
-					it.Action = func() { go func() { _ = exec.Command("open", path).Run() }() }
-				} else {
-					it.Action = func() { openZed(path) }
-				}
-				items = append(items, it)
-			}
-			*p.into = items
-			// The folder's items are all in place now, so their Children can
-			// be pointed at for the next level.
-			for i := range items {
-				if items[i].Open != nil {
-					next = append(next, pending{filepath.Join(p.dir, items[i].Label), &items[i].Children})
-				}
-			}
+	for _, e := range entries {
+		name := e.Name()
+		if name == ".DS_Store" || (e.IsDir() && strings.HasPrefix(name, ".")) {
+			continue
 		}
-		level = next
+		if len(items) == fileTreeMaxNodes {
+			more++
+			continue
+		}
+		it := tree.Item{Label: name}
+		if e.IsDir() {
+			open := false
+			it.Open = &open
+		} else {
+			path := filepath.Join(dir, name)
+			it.Action = func() { openZed(path) }
+		}
+		items = append(items, it)
 	}
-	return root
+	return items, more
 }
 
 // infoFilesView is the Files section: the working directory as a tree,
-// with folders that open in Finder and files that open in Zed, as otty's
+// with folders that open in place and files that open in Zed, as otty's
 // Files tab browses the project. The tree draws a folder icon on each
 // directory and a file icon on each file, as otty does.
 func (a *app) infoFilesView(c *ui.Context) {
@@ -838,16 +817,20 @@ func (a *app) infoFilesView(c *ui.Context) {
 	})
 }
 
-// fileTree draws one level of the Files section's tree. A directory shows
-// a chevron and a folder icon, opens and closes when clicked, and nests
-// its children one indent in; a file shows a file icon and opens on a
-// click. The open state lives on the items' Open pointers, as the tree
+// fileTree draws one level of the Files section's tree, the entries of
+// the folder whose row has the path parent. A directory shows a chevron
+// and a folder icon, opens and closes when clicked, and nests its children
+// one indent in; it is listed when it is first opened, and keeps its list
+// while the tree lives. A file shows a file icon and opens on a click. A
+// folder with more entries than it lists ends with a row that counts the
+// rest. The open state lives on the items' Open pointers, as the tree
 // component's does. Every level draws into one column, so a row's key is
 // its path under parent: a depth and an index would be shared by the
 // children of two open folders.
 func (a *app) fileTree(c *ui.Context, items []tree.Item, parent string, depth int) {
 	t := c.Theme()
-	for _, it := range items {
+	for i := range items {
+		it := &items[i] // the item itself: opening a folder gives it its children
 		dir := it.Open != nil
 		path := parent + "/" + it.Label
 		b := ui.ButtonBase(c.Key("file-"+path)).
@@ -879,6 +862,14 @@ func (a *app) fileTree(c *ui.Context, items []tree.Item, parent string, depth in
 		if b.Clicked() {
 			if dir {
 				*it.Open = !*it.Open
+				if *it.Open && it.Children == nil {
+					var more int
+					it.Children, more = listFolder(filepath.Join(a.info.filesDir, path))
+					if a.info.filesMore == nil {
+						a.info.filesMore = map[string]int{}
+					}
+					a.info.filesMore[path] = more
+				}
 			} else if it.Action != nil {
 				it.Action()
 			}
@@ -886,5 +877,11 @@ func (a *app) fileTree(c *ui.Context, items []tree.Item, parent string, depth in
 		if dir && *it.Open {
 			a.fileTree(c, it.Children, path, depth+1)
 		}
+	}
+	if more := a.info.filesMore[parent]; more > 0 {
+		// Where a label starts: past the row's padding, chevron and icon.
+		ui.Box(c).Padding(4, 0, 4, 4+float32(depth)*12+13+6+14+6).Children(func() {
+			ui.Text(c, fmt.Sprintf("… +%d", more)).SingleLine().FontSize(12).TextColor(t.TextMuted)
+		})
 	}
 }
