@@ -48,7 +48,9 @@ Go 1.27 downloads itself if needed. The first run fetches
 go run github.com/egoist/mygo/cmd/mygo@v0.4.2 build
 ```
 
-The result is a signed `Nutty.app` and a DMG under `dist/`.
+The result is `Nutty.app` and a DMG for this Mac's architecture, under
+`dist/`. `make package` builds the universal app and DMG into `out/`, as
+the release workflow does. The app is ad hoc signed and not notarized.
 
 ## Tests
 

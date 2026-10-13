@@ -1,5 +1,5 @@
-// Icon renders assets/nutty.svg into resources/icon.png, the app icon,
-// with MyGo's own headless renderer: go run ./tools/icon
+// Icon renders internal/app/assets/nutty.svg into resources/icon.png,
+// the app icon, with MyGo's own headless renderer: go run ./tools/icon
 //
 // The icon follows the reference format: the nut mark on a rounded black
 // tile with a transparent background.
