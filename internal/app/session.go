@@ -38,6 +38,17 @@ func (s *session) displayTitle() string {
 	return shellName()
 }
 
+// tabLabel is what the rail and the tab bar draw on a tab: the user's
+// name when the tab was renamed, else the directory the shell runs in.
+// A renamed tab keeps its name when the shell changes directory, as
+// otty pins the name the user gives a tab.
+func tabLabel(s *session) string {
+	if s.name != "" {
+		return s.name
+	}
+	return homeShown(s.dir)
+}
+
 // node is the pane tree of a session: a terminal (leaf) or a split.
 type node struct {
 	term  *pane

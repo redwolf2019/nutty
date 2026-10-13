@@ -73,7 +73,7 @@ func (a *app) railItem(c *ui.Context, i int, s *session) (close bool) {
 	}
 	b.Children(func() {
 		ui.Row(c).FillWidth().Gap(6).Children(func() {
-			name := ui.Text(c, homeShown(s.dir)).SingleLine().Grow(1).MinWidth(0)
+			name := ui.Text(c, tabLabel(s)).SingleLine().Grow(1).MinWidth(0)
 			if on {
 				name.Bold()
 			} else {

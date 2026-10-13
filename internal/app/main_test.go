@@ -193,3 +193,35 @@ func TestViewChrome(t *testing.T) {
 		t.Fatalf("display title = %q, want newname", got)
 	}
 }
+
+// TestRenamePinsTab checks that a renamed tab draws its name on the rail
+// and the tab bar, and keeps it when the shell changes directory: the
+// path the tab would otherwise show is pinned by the name, as otty pins
+// the name the user gives a tab. The window title still follows the
+// directory (user@host:dir), so the check looks at the tab label alone.
+func TestRenamePinsTab(t *testing.T) {
+	for _, layout := range []string{"sidebar-left", "tabs-top", "tabs-bottom"} {
+		a := testApp()
+		a.settings.WindowLayout = layout
+		s := a.newSession("/tmp/nutty-origin")
+		s.name = "pinned"
+		tt := ui.NewTester(a.view, 1000, 700)
+		tt.Frame()
+		if _, ok := tt.Find("pinned"); !ok {
+			t.Fatalf("%s: renamed tab missing its name, texts: %v", layout, tt.Texts())
+		}
+		if _, ok := tt.Find("/tmp/nutty-origin"); ok {
+			t.Fatalf("%s: renamed tab still shows the path, texts: %v", layout, tt.Texts())
+		}
+		// The shell changes directory; the tab keeps its pinned name.
+		s.dir = "/elsewhere"
+		a.refreshTitle()
+		tt.Frame()
+		if _, ok := tt.Find("pinned"); !ok {
+			t.Fatalf("%s: renamed tab lost its name after the path changed, texts: %v", layout, tt.Texts())
+		}
+		if _, ok := tt.Find("/elsewhere"); ok {
+			t.Fatalf("%s: renamed tab moved with the path, texts: %v", layout, tt.Texts())
+		}
+	}
+}

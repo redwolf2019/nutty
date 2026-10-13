@@ -63,7 +63,7 @@ func (a *app) tabItem(c *ui.Context, i int, s *session) (close bool) {
 	}
 	b.Children(func() {
 		ui.Row(c).Gap(6).Children(func() {
-			name := ui.Text(c, homeShown(s.dir)).SingleLine().FontSize(12)
+			name := ui.Text(c, tabLabel(s)).SingleLine().FontSize(12)
 			if !on {
 				name.TextColor(t.TextMuted)
 			}
