@@ -35,7 +35,6 @@ var extraSettings = []extraDef{
 	{"ctrl-shortcuts", "string", "shell"},
 	{"data-sync", "bool", false},
 	{"dedup-repaint-scrollback", "bool", true},
-	{"detect-awaiting-input", "bool", true},
 	{"dock-icon-animate-progress", "bool", false},
 	{"dock-icon-error-badge", "bool", true},
 	{"effective-background-opacity", "number", 1.0},

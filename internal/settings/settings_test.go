@@ -90,11 +90,27 @@ func TestThemeNames(t *testing.T) {
 	}
 }
 
-// TestSettingsRegistry checks the settings registry: every modeled key's
-// get and set round-trip, every page group references a key the registry
-// holds, and the enum values all have a label.
+// TestSettingsRegistry checks the settings registry: every key is one
+// setting's, every modeled key's get and set round-trip, every page group
+// references a key the registry holds, and the enum values all have a
+// label.
 func TestSettingsRegistry(t *testing.T) {
 	s := Default()
+	// A page finds its setting by key, and finds the first: a second def
+	// under the same key never draws, and its setting has no control.
+	keys := map[string]bool{}
+	for _, d := range settingsDefs {
+		if keys[d.key] {
+			t.Errorf("%s: two settings share the key", d.key)
+		}
+		keys[d.key] = true
+	}
+	for _, x := range extraSettings {
+		if keys[x.key] {
+			t.Errorf("%s: an unmodeled key repeats another key", x.key)
+		}
+		keys[x.key] = true
+	}
 	for _, d := range settingsDefs {
 		orig := d.get(s)
 		switch d.kind {
