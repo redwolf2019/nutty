@@ -25,7 +25,9 @@ func (a *app) stripBar(c *ui.Context) float32 {
 func (a *app) topstrip(c *ui.Context) {
 	t := c.Theme()
 	bar := c.TitleBar()
-	ui.Row(c).FillWidth().Shrink(0).Height(44).DragWindow().Children(func() {
+	// A press on the strip or its buttons leaves the keyboard focus in the
+	// terminal, as a press on the rail does (see railView).
+	ui.Row(c).FillWidth().Shrink(0).Height(44).DragWindow().KeepFocus().Children(func() {
 		if a.sideOpen && a.settings.WindowLayout == "sidebar-left" {
 			// The rail's column continues through the strip: its surface and
 			// its right border, with a new-tab button and the rail's toggle

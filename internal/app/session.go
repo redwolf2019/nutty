@@ -181,8 +181,13 @@ func (a *app) renderNode(c *ui.Context, n *node) {
 // renderPane draws one terminal, filling the pane with no ring around it —
 // otty draws none, and a ring around a terminal reads as a border.
 func (a *app) renderPane(c *ui.Context, p *pane) {
-	on := p.handle.Focused(c)
-	if on {
+	// The pane with the focus is the active one, unless a command just
+	// chose another (focusPane): that one takes the focus as it draws, and
+	// the pane the focus is leaving does not claim activePane meanwhile.
+	chosen := a.focusActive && p == a.activePane
+	if chosen {
+		a.focusActive = false
+	} else if !a.focusActive && p.handle.Focused(c) {
 		a.activePane = p
 	}
 	ui.Box(c).Fill().Clip().Children(func() {
@@ -195,7 +200,9 @@ func (a *app) renderPane(c *ui.Context, p *pane) {
 			return
 		}
 		tv := terminal.View(c, p.term)
-		if p == a.activePane && a.panel == panelNone && !a.paletteOpen {
+		if chosen {
+			tv.Focus()
+		} else if p == a.activePane && a.panel == panelNone && !a.paletteOpen {
 			tv.AutoFocus()
 		}
 		tv.Fill().Bind(&p.handle)
@@ -233,7 +240,7 @@ func (a *app) splitPane(p *pane, vertical bool) {
 		})
 	}
 	s.panes = append(s.panes, np)
-	a.activePane = np
+	a.focusPane(np)
 }
 
 // defaultSplitSize puts the divider near the middle of the window.

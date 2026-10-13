@@ -14,7 +14,10 @@ import (
 // hover shows its close button.
 func (a *app) railView(c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).Width(a.sidebarWidth()).FillHeight().Shrink(0).Background(t.Surface).
+	// A press on the rail leaves the keyboard focus where it is: its tabs
+	// are buttons, which would take the focus from the terminal and keep
+	// it, so nothing typed after a click on a tab would reach the shell.
+	ui.Column(c).KeepFocus().Width(a.sidebarWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 1, 0, 0).BorderColor(t.Border).Children(func() {
 		// The section header: "TABS" and a filter icon that opens the
 		// command palette, as otty draws them. Hiding the rail is the
