@@ -15,6 +15,7 @@ type settingDef struct {
 	desc  string
 	kind  string // "bool" | "enum" | "number" | "color" | "string" | "list"
 	enum  []enumOpt
+	open  bool // an enum that also takes values beyond its options
 	def   any
 	lo    float64
 	hi    float64
@@ -351,5 +352,11 @@ func init() {
 			get: func(s *Settings) any { return s.Palette[i] },
 			set: func(s *Settings, v any) { s.Palette[i] = v.(string) },
 		})
+	}
+	// The selects of these offer some of the values they take: a theme is
+	// any Ghostty theme by name or by path, and bold text may have a color
+	// of its own. Such a value is not a mistake to put back (see validate).
+	for _, key := range []string{"theme", "theme-dark", "bold-color"} {
+		defByKey(key).open = true
 	}
 }
