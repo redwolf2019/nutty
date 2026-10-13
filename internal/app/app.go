@@ -346,7 +346,13 @@ func (a *app) openSettings() {
 
 // beginRename opens the rename dialog for the active session.
 func (a *app) beginRename() {
-	s := a.currentSession()
+	a.beginRenameSession(a.currentSession())
+}
+
+// beginRenameSession opens the rename dialog for a session. The tab's
+// double click renames the tab it hit, the menu and palette the active
+// session.
+func (a *app) beginRenameSession(s *session) {
 	if s == nil {
 		return
 	}

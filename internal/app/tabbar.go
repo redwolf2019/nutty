@@ -61,6 +61,9 @@ func (a *app) tabItem(c *ui.Context, i int, s *session) (close bool) {
 	if b.Clicked() {
 		a.activate(s)
 	}
+	if b.DoubleClicked() {
+		a.beginRenameSession(s)
+	}
 	b.Children(func() {
 		ui.Row(c).Gap(6).Children(func() {
 			name := ui.Text(c, tabLabel(s)).SingleLine().FontSize(12)

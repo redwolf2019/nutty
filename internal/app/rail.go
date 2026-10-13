@@ -71,6 +71,9 @@ func (a *app) railItem(c *ui.Context, i int, s *session) (close bool) {
 	if b.Clicked() {
 		a.activate(s)
 	}
+	if b.DoubleClicked() {
+		a.beginRenameSession(s)
+	}
 	b.Children(func() {
 		ui.Row(c).FillWidth().Gap(6).Children(func() {
 			name := ui.Text(c, tabLabel(s)).SingleLine().Grow(1).MinWidth(0)

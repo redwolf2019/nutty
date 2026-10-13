@@ -225,3 +225,34 @@ func TestRenamePinsTab(t *testing.T) {
 		}
 	}
 }
+
+// TestDoubleClickRenames checks that two clicks on a tab open its rename
+// dialog: on the rail and on the tab bar, the tab the double click hit,
+// not just the active one. Both presses must land within 5px of each
+// other, so the second press uses the rect found before the first click
+// activated the tab and re-rendered its label bold (which shifts the
+// label's center).
+func TestDoubleClickRenames(t *testing.T) {
+	for _, layout := range []string{"sidebar-left", "tabs-top", "tabs-bottom"} {
+		a := testApp()
+		a.settings.WindowLayout = layout
+		a.newSession("/tmp/nutty-first")
+		second := a.newSession("/tmp/nutty-second")
+		tt := ui.NewTester(a.view, 1000, 700)
+		tt.Frame()
+		// Double click the second tab, which is not the active one.
+		r, ok := tt.Find("/tmp/nutty-second")
+		if !ok {
+			t.Fatalf("%s: tab label not found, texts: %v", layout, tt.Texts())
+		}
+		tt.ClickAt(r.X+r.W/2, r.Y+r.H/2)
+		tt.ClickAt(r.X+r.W/2, r.Y+r.H/2)
+		tt.Frame()
+		if !a.rename.open {
+			t.Fatalf("%s: double click did not open the rename dialog", layout)
+		}
+		if a.rename.target != second {
+			t.Fatalf("%s: rename target = %v, want the second tab", layout, a.rename.target)
+		}
+	}
+}
