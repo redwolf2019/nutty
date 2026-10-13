@@ -185,13 +185,17 @@ func (sw *settingsWindow) groupsFor(id string) []uixsettings.SettingsGroup {
 
 // pageItem is the group of a category that draws its whole page itself:
 // an unheaded group with one item that fills the row. The shell's row
-// shows an empty title and would give the page only its intrinsic width;
-// a minimum wider than any content makes the row hand it everything.
+// shows an empty title beside the page, and both ask for the row's whole
+// width. The page barely shrinks, so the empty title gives its share up
+// first and the page takes the row. A fixed minimum did that too, but it
+// was wider than the row of the window at its default size, where the
+// page's right side, the key bindings' shortcuts with it, ran off the
+// window.
 func pageItem(build func(c *ui.Context)) uixsettings.SettingsGroup {
 	return uixsettings.SettingsGroup{ID: "page", Items: []uixsettings.SettingsItem{{
 		ID: "page",
 		Build: func(c *ui.Context) {
-			ui.Column(c).FillWidth().MinWidth(560).Children(func() { build(c) })
+			ui.Column(c).FillWidth().Shrink(0.0001).Children(func() { build(c) })
 		},
 	}}}
 }
