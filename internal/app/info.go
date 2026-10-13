@@ -399,17 +399,20 @@ func (a *app) loadGit() {
 		return
 	}
 	a.info.git.done = false
+	// The session and its directory belong to the UI thread: read them here,
+	// not in the loader.
+	s := a.currentSession()
+	dir := ""
+	if s != nil {
+		dir = s.dir
+	}
 	go func() {
-		s := a.currentSession()
-		dir := ""
 		var branch string
 		var changes []gitChange
 		if s != nil {
-			dir = s.dir
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			out, err := exec.CommandContext(ctx, "git", "-C", dir,
-				"status", "--porcelain=v1", "-b").Output()
+			out, err := exec.CommandContext(ctx, "git", gitStatusArgs(dir)...).Output()
 			if err == nil {
 				branch, changes = parseGitStatus(string(out))
 			}
@@ -439,25 +442,47 @@ func staleInfoCommit(cur, loaded *session, dir string) bool {
 	return loaded != nil && loaded.dir != dir
 }
 
-// parseGitStatus reads git status --porcelain=v1 -b output: the branch
-// from the "## " header, and one change per other line, keeping the raw
+// gitStatusArgs is the git status the Git section runs in dir. With -z the
+// entries end in NUL and their paths come as they are: without it git
+// quotes a path with a space or a non-ASCII letter in it.
+func gitStatusArgs(dir string) []string {
+	return []string{"-C", dir, "status", "--porcelain=v1", "-b", "-z"}
+}
+
+// gitDiffArgs is the git diff of one path of the status. The status lists
+// paths from the repository's root, so the pathspec is anchored there:
+// dir may be a directory below it.
+func gitDiffArgs(dir, path string, staged bool) []string {
+	args := []string{"-C", dir, "diff"}
+	if staged {
+		args = append(args, "--cached")
+	}
+	return append(args, "--", ":(top,literal)"+path)
+}
+
+// parseGitStatus reads git status --porcelain=v1 -b -z output: the branch
+// from the "## " header, and one change per other entry, keeping the raw
 // two-letter status. A detached HEAD reports the branch as "HEAD".
 func parseGitStatus(out string) (branch string, changes []gitChange) {
-	for _, line := range strings.Split(out, "\n") {
+	entries := strings.Split(out, "\x00")
+	for i := 0; i < len(entries); i++ {
+		line := entries[i]
 		if len(line) < 4 {
 			continue
 		}
 		if strings.HasPrefix(line, "## ") {
-			branch = strings.TrimPrefix(strings.Fields(line)[1], "#")
-			if i := strings.Index(branch, "..."); i >= 0 {
-				branch = branch[:i]
-			}
+			// "main...origin/main [ahead 1]", "HEAD (no branch)", or, in a
+			// repository without a commit, "No commits yet on main".
+			branch = strings.TrimPrefix(line[3:], "No commits yet on ")
+			branch, _, _ = strings.Cut(branch, "...")
+			branch, _, _ = strings.Cut(branch, " ")
 			continue
 		}
-		changes = append(changes, gitChange{
-			status: line[:2],
-			path:   strings.TrimSpace(line[3:]),
-		})
+		changes = append(changes, gitChange{status: line[:2], path: line[3:]})
+		// A rename or a copy is followed by the path it came from.
+		if strings.ContainsAny(line[:2], "RC") {
+			i++
+		}
 	}
 	return branch, changes
 }
@@ -470,22 +495,27 @@ func (a *app) loadGitDiff(path string, staged bool) {
 	}
 	a.info.git.diffOpen = path
 	a.info.git.diffLines = nil
+	s := a.currentSession()
+	if s == nil {
+		return
+	}
+	dir := s.dir
 	go func() {
-		s := a.currentSession()
-		var lines []string
-		if s != nil {
-			args := []string{"-C", s.dir, "diff"}
-			if staged {
-				args = append(args, "--cached")
-			}
-			args = append(args, "--", path)
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			defer cancel()
-			if out, err := exec.CommandContext(ctx, "git", args...).Output(); err == nil {
-				lines = strings.Split(strings.TrimRight(string(out), "\n"), "\n")
-			}
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		// A nil diff draws as "Reading…": a failed git shows its error.
+		lines := []string{}
+		out, err := exec.CommandContext(ctx, "git", gitDiffArgs(dir, path, staged)...).Output()
+		if err != nil {
+			lines = []string{err.Error()}
+		} else if len(out) > 0 {
+			lines = strings.Split(strings.TrimRight(string(out), "\n"), "\n")
 		}
 		a.win.Update(func() {
+			// Another row was opened, or this one closed, while git ran.
+			if a.info.git.diffOpen != path || staleInfoCommit(a.currentSession(), s, dir) {
+				return
+			}
 			a.info.git.diffLines = lines
 		})
 	}()
