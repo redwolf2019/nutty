@@ -113,3 +113,38 @@ func TestRenameReturnsFocus(t *testing.T) {
 		t.Error("the terminal did not get the focus back after the rename")
 	}
 }
+
+// TestPanelToolbarKeepsTerminalFocus clicks the info and the chat panel's
+// own toolbar in a Tabs layout, where it is drawn at the top of the panel's
+// column and not in the strip, and checks that the terminal keeps the
+// keyboard focus, as it does for a click on the strip.
+func TestPanelToolbarKeepsTerminalFocus(t *testing.T) {
+	for _, c := range []struct {
+		panel panelMode
+		click string // closes the panel: the open section's pill, the chat's close button
+	}{
+		{panelInfo, tr("Info")},
+		{panelChat, "×"},
+	} {
+		a := focusApp(t)
+		a.settings.WindowLayout = "tabs-top"
+		a.newSession("/tmp/nutty-focus")
+		tt := ui.NewTester(a.view, 1000, 700)
+		focusFrames(tt)
+		a.setPanel(c.panel)
+		focusFrames(tt)
+		if !tt.Focused("Terminal") {
+			t.Fatalf("%q: the terminal should have the focus beside the open panel", c.click)
+		}
+		if err := tt.Click(c.click); err != nil {
+			t.Fatal(err)
+		}
+		focusFrames(tt)
+		if a.panel != panelNone {
+			t.Fatalf("%q: the click did not close the panel", c.click)
+		}
+		if !tt.Focused("Terminal") {
+			t.Errorf("%q: a click on the panel's toolbar took the focus from the terminal", c.click)
+		}
+	}
+}

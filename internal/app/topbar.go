@@ -200,7 +200,10 @@ func (a *app) infoToolbar(c *ui.Context) {
 // draws it in the top strip; the Tabs layouts draw it at the top of the
 // panel's full-height column.
 func (a *app) infoToolbarRow(c *ui.Context) {
-	ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
+	// The Tabs layouts draw this row outside the strip, at the top of the
+	// panel's column, so it keeps the focus in the terminal itself: its
+	// buttons would take it otherwise, as the strip's would (see topstrip).
+	ui.Row(c).KeepFocus().FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
 		a.infoTabButton(c, "toolbar-info", lucide.Info(), tr("Info"), infoTabInfo, func() {
 			if a.info.tab == infoTabInfo {
 				a.toggleInfo()
@@ -272,7 +275,9 @@ func (a *app) chatToolbar(c *ui.Context) {
 // full-height column.
 func (a *app) chatToolbarRow(c *ui.Context) {
 	t := c.Theme()
-	ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 14).Gap(8).Children(func() {
+	// As the info panel's row, it keeps the focus in the terminal where the
+	// Tabs layouts draw it outside the strip (see infoToolbarRow).
+	ui.Row(c).KeepFocus().FillWidth().Height(a.stripBar(c)).Padding(0, 14).Gap(8).Children(func() {
 		nutTile(c, 18)
 		ui.Text(c, tr("Agent")).Bold()
 		ui.Box(c).Grow(1)
