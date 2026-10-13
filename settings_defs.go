@@ -215,7 +215,7 @@ var settingsDefs = []settingDef{
 		en("off", "Off (system default)"), en("tab-unfocused", "Only when source tab is unfocused"), en("always", "Always")),
 
 	// --- General ---
-	dEnum("language", "Language", "The language of the app's interface.", func(s *settings) *string { return &s.Language }, "system",
+	dEnum("language", "Language", "The language of the app's interface.", func(s *settings) *string { return &s.Language }, "chinese",
 		en("system", "System"), en("english", "English"), en("chinese", "中文")),
 	dEnum("on-launch", "On Launch", "What Otty does when it starts.", func(s *settings) *string { return &s.OnLaunch }, "restore_session",
 		en("new_window", "New Window"), en("restore_session", "Restore Last Session")),

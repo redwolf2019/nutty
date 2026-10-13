@@ -116,7 +116,7 @@ type settings struct {
 	NotifyForeground string // "off" | "tab-unfocused" | "always"
 
 	// General — app behavior.
-	Language                     string // "system" | "english" | "chinese"
+	Language                     string // "system" | "english" | "chinese"; default chinese
 	OnLaunch                     string // "new_window" | "restore_session"
 	QuitAfterLastWindowClosed    bool
 	NewWindowWhenAllWindowsClosed bool
@@ -272,7 +272,7 @@ func defaultSettings() *settings {
 		NotifyOnError:         true,
 		NotifyForeground:      "off",
 
-		Language:             "system",
+		Language:             "chinese",
 		OnLaunch:             "restore_session",
 		NewTabPosition:       "auto",
 		ConfirmCloseTab:      "process",

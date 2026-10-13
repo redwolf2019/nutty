@@ -47,6 +47,10 @@ func TestSettingsJSON(t *testing.T) {
 func TestSettingsApply(t *testing.T) {
 	a := &app{settings: defaultSettings()}
 
+	if a.settings.Language != "chinese" {
+		t.Fatalf("default language = %q, want chinese", a.settings.Language)
+	}
+
 	f := a.termFont()
 	if f.Family != "JetBrains Mono" || f.Size != 13 {
 		t.Fatalf("default font = %+v", f)
