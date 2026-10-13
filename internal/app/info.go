@@ -146,7 +146,7 @@ func (a *app) detailsViewEnabled(id string) bool {
 // opens; the others load once and keep their state.
 func (a *app) loadInfoTab() {
 	if !a.detailsViewEnabled(infoTabID(a.info.tab)) {
-		a.info.tab = infoTabInfo
+		a.info.tab = a.detailsTabs()[0]
 	}
 	switch a.info.tab {
 	case infoTabInfo:
