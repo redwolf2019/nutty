@@ -150,7 +150,9 @@ func (sw *settingsWindow) profileThemeSelect(c *ui.Context, set *string) {
 			show = labels[i]
 		}
 	}
-	uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels})
+	if !uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels}).Changed() {
+		return
+	}
 	fs := i18n.Tr("Follow system")
 	if show != "" && show != fs && *set != show {
 		*set = show
