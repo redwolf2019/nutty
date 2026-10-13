@@ -9,7 +9,7 @@ import (
 	"github.com/smallnest/uix/components/tree"
 )
 
-// treeLabels is the labels of a level of the tree, in order.
+// labels is the labels of a level of the tree, in order.
 func labels(items []tree.Item) []string {
 	var out []string
 	for _, it := range items {
@@ -18,7 +18,7 @@ func labels(items []tree.Item) []string {
 	return out
 }
 
-// treeChild is the item of a level with the label, or nil.
+// child is the item of a level with the label, or nil.
 func child(items []tree.Item, label string) *tree.Item {
 	for i := range items {
 		if items[i].Label == label {
