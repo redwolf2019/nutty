@@ -172,6 +172,7 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 		p.err = err
 		return nil
 	}
+	a.runAfter(term)
 	return term
 }
 
