@@ -1,10 +1,12 @@
-package main
+package settings
 
 import (
 	"encoding/json"
 	"os"
 	"os/exec"
 	"strings"
+
+	"nutty/i18n"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -14,34 +16,34 @@ import (
 	"github.com/smallnest/uix/components/input"
 	"github.com/smallnest/uix/components/numberinput"
 	"github.com/smallnest/uix/components/searchfield"
-	"github.com/smallnest/uix/components/textarea"
 	uixswitch "github.com/smallnest/uix/components/switch"
+	"github.com/smallnest/uix/components/textarea"
 )
 
 // pageAdvanced is the Advanced category: the config file, import and
 // export, and the All Settings list, every key of otty's config with an
 // inline editor.
 func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
-	sw.group(c, "Config File", func() {
+	sw.group(c, i18n.Tr("Config File"), func() {
 		t := c.Theme()
-		ui.Text(c, settingsPath()).FontSize(11).TextColor(t.TextMuted).SingleLine()
+		ui.Text(c, Path()).FontSize(11).TextColor(t.TextMuted).SingleLine()
 		ui.Row(c).Gap(8).Children(func() {
-			sw.advButton(c, "adv-open-config", "Open", func() {
-				exec.Command("open", settingsPath()).Start()
+			sw.advButton(c, "adv-open-config", i18n.Tr("Open"), func() {
+				exec.Command("open", Path()).Start()
 			})
-			sw.advButton(c, "adv-reload-config", "Reload", func() {
-				*sw.s = *loadSettings()
+			sw.advButton(c, "adv-reload-config", i18n.Tr("Reload"), func() {
+				*sw.s = *Load()
 				sw.wells = colorWells{}
 				sw.lists = nil
-				sw.a.applySettings()
+				sw.app.ApplySettings()
 			})
 		})
 	})
-	sw.group(c, "Import / Export", func() {
+	sw.group(c, i18n.Tr("Import / Export"), func() {
 		ui.Row(c).Gap(8).Children(func() {
-			sw.advButton(c, "adv-export", "Export…", func() {
+			sw.advButton(c, "adv-export", i18n.Tr("Export…"), func() {
 				path, err := mygo.Dialog.Save(mygo.SaveDialogOptions{
-					Parent: sw.win, Title: "Export Settings",
+					Parent: sw.win, Title: i18n.Tr("Export Settings"),
 					DefaultPath: "nutty-settings.json",
 					Filters:     []mygo.FileFilter{{Name: "JSON", Extensions: []string{"json"}}},
 				})
@@ -52,47 +54,47 @@ func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
 					os.WriteFile(path, b, 0o644)
 				}
 			})
-			sw.advButton(c, "adv-import", "Import…", func() {
+			sw.advButton(c, "adv-import", i18n.Tr("Import…"), func() {
 				paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
-					Parent: sw.win, Title: "Import Settings",
+					Parent: sw.win, Title: i18n.Tr("Import Settings"),
 					Filters: []mygo.FileFilter{{Name: "JSON", Extensions: []string{"json"}}},
 				})
 				if err != nil || len(paths) == 0 {
 					return
 				}
 				if b, err := os.ReadFile(paths[0]); err == nil {
-					if loaded := loadSettingsFrom(b); loaded != nil {
+					if loaded := LoadFrom(b); loaded != nil {
 						*sw.s = *loaded
 						sw.wells = colorWells{}
 						sw.lists = nil
-						sw.a.applySettings()
-						sw.a.saveSettings()
+						sw.app.ApplySettings()
+						sw.app.SaveSettings()
 					}
 				}
 			})
 		})
-		sw.hint(c, "Import replaces the current settings with the file's.")
+		sw.hint(c, i18n.Tr("Import replaces the current settings with the file's."))
 	})
-	sw.group(c, "Debug", func() {
+	sw.group(c, i18n.Tr("Debug"), func() {
 		uixswitch.Switch(c, uixswitch.Props{
-			On: &sw.s.DebugMode, Label: "Debug mode",
+			On: &sw.s.DebugMode, Label: i18n.Tr("Debug mode"),
 		})
-		sw.hint(c, "Writes extra logs to the console and shows the developer tools.")
+		sw.hint(c, i18n.Tr("Writes extra logs to the console and shows the developer tools."))
 	})
-	sw.group(c, "All Settings", func() {
+	sw.group(c, i18n.Tr("All Settings"), func() {
 		searchfield.SearchField(c, searchfield.Props{Value: &sw.settingsSearch})
 		sw.allSettingsList(c)
 	})
-	sw.group(c, "Reset", func() {
-		sw.advButton(c, "adv-reset", "Reset All Settings", func() {
-			*sw.s = *defaultSettings()
+	sw.group(c, i18n.Tr("Reset"), func() {
+		sw.advButton(c, "adv-reset", i18n.Tr("Reset All Settings"), func() {
+			*sw.s = *Default()
 			sw.wells = colorWells{}
 			sw.lists = nil
-			sw.a.applySettings()
-			sw.a.saveSettings()
-			sw.a.applyKeybinds()
+			sw.app.ApplySettings()
+			sw.app.SaveSettings()
+			sw.app.ApplyKeybinds()
 		})
-		sw.hint(c, "Returns every setting to otty's defaults.")
+		sw.hint(c, i18n.Tr("Returns every setting to otty's defaults."))
 	})
 }
 
@@ -132,12 +134,12 @@ func (sw *settingsWindow) allSettingsList(c *ui.Context) {
 		sw.renderExtra(c, x)
 	}
 	if shown == 0 {
-		sw.hint(c, "No matching settings")
+		sw.hint(c, i18n.Tr("No matching settings"))
 	}
 }
 
 // renderExtra draws one unmodeled key's inline editor, reading and
-// writing it through settings.Extra.
+// writing it through Settings.Extra.
 func (sw *settingsWindow) renderExtra(c *ui.Context, x extraDef) {
 	t := c.Theme()
 	key := "extra:" + x.key
@@ -161,12 +163,12 @@ func (sw *settingsWindow) renderExtra(c *ui.Context, x extraDef) {
 			st := sw.extraWellState(key)
 			colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: x.key})
 			if st.inUse {
-				rb := ui.ButtonBase(c.Key("reset-extra-" + x.key)).Padding(2, 8).Radius(t.Radius).
-					FocusRing(false).Tooltip("Use the default color")
+				rb := ui.ButtonBase(c.Key("reset-extra-"+x.key)).Padding(2, 8).Radius(t.Radius).
+					FocusRing(false).Tooltip(i18n.Tr("Use the default color"))
 				rb.Children(func() {
 					ui.Row(c).Gap(4).Children(func() {
 						ui.Image(c, lucide.RotateCcw()).Size(12, 12)
-						ui.Text(c, "Reset").FontSize(12).TextColor(t.TextMuted)
+						ui.Text(c, i18n.Tr("Reset")).FontSize(12).TextColor(t.TextMuted)
 					})
 				})
 				if rb.Clicked() {
@@ -190,21 +192,21 @@ func (sw *settingsWindow) renderExtra(c *ui.Context, x extraDef) {
 	}
 }
 
-func extraBool(s *settings, key string) bool {
+func extraBool(s *Settings, key string) bool {
 	if v, ok := s.Extra[key].(bool); ok {
 		return v
 	}
 	return false
 }
 
-func extraFloat(s *settings, key string) float64 {
+func extraFloat(s *Settings, key string) float64 {
 	if v, ok := s.Extra[key].(float64); ok {
 		return v
 	}
 	return 0
 }
 
-func extraString(s *settings, key string) string {
+func extraString(s *Settings, key string) string {
 	if v, ok := s.Extra[key].(string); ok {
 		return v
 	}
@@ -212,7 +214,7 @@ func extraString(s *settings, key string) string {
 }
 
 // extraWellState is the color well state of an unmodeled color key, so the
-// All Settings list can edit colors through settings.Extra.
+// All Settings list can edit colors through Settings.Extra.
 func (sw *settingsWindow) extraWellState(key string) *colorWellState {
 	if sw.wells.state == nil {
 		sw.wells.state = map[string]*colorWellState{}
@@ -244,7 +246,7 @@ func (sw *settingsWindow) extraListEditor(c *ui.Context, bufKey, key string) {
 	}
 }
 
-func extraList(s *settings, key string) []string {
+func extraList(s *Settings, key string) []string {
 	if v, ok := s.Extra[key].([]string); ok {
 		return v
 	}

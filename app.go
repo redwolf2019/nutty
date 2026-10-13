@@ -8,6 +8,8 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 	"github.com/smallnest/uix/components/command"
+
+	"nutty/settings"
 )
 
 // panelMode is the panel on the right of the window: the agent chat or
@@ -39,11 +41,11 @@ type app struct {
 	sel    string // the rail's chosen session id
 	rename renameState
 
-	settings    *settings
-	settingsWin *mygo.Window // the single settings window, when open
-	winSizeW    int          // the window size the settings last applied
-	winSizeH    int
-	pendingClose *session    // the tab awaiting the confirm dialog, or nil
+	settings     *settings.Settings
+	settingsWin  *mygo.Window // the single settings window, when open
+	winSizeW     int          // the window size the settings last applied
+	winSizeH     int
+	pendingClose *session // the tab awaiting the confirm dialog, or nil
 
 	chat  chatState
 	agent Agent
@@ -66,7 +68,7 @@ var (
 // hidden so the view draws its own under the traffic lights, as otty
 // does.
 func newWindow() *app {
-	s := loadSettings()
+	s := settings.Load()
 	a := &app{
 		settings: s,
 		sideOpen: s.SidebarVisible,
@@ -74,15 +76,15 @@ func newWindow() *app {
 	}
 	a.winSizeW, a.winSizeH = int(a.settings.WindowWidth), int(a.settings.WindowHeight)
 	a.win = mygo.NewWindow(mygo.WindowOptions{
-		Title:              "Nutty",
-		Width:              int(a.settings.WindowWidth),
-		Height:             int(a.settings.WindowHeight),
-		Opacity:            a.settings.WindowOpacity,
-		MinWidth:           680,
-		MinHeight:          440,
-		TitleBarStyle:      mygo.TitleBarHiddenInset,
+		Title:                "Nutty",
+		Width:                int(a.settings.WindowWidth),
+		Height:               int(a.settings.WindowHeight),
+		Opacity:              a.settings.WindowOpacity,
+		MinWidth:             680,
+		MinHeight:            440,
+		TitleBarStyle:        mygo.TitleBarHiddenInset,
 		TrafficLightPosition: &mygo.Point{X: 14, Y: 7},
-		Content:            ui.View(a.view),
+		Content:              ui.View(a.view),
 	})
 	appsMu.Lock()
 	apps[a.win.ID()] = a
@@ -230,7 +232,7 @@ func (a *app) toggleSidebar() {
 	a.sideOpen = !a.sideOpen
 	if a.settings != nil {
 		a.settings.SidebarVisible = a.sideOpen
-		a.saveSettings()
+		a.SaveSettings()
 	}
 }
 
@@ -318,14 +320,14 @@ func (a *app) openInZed() {
 
 func (a *app) zoomFont(delta float32) {
 	a.settings.FontSize = min(max(a.settings.FontSize+float64(delta), 8), 26)
-	a.applySettings()
-	a.saveSettings()
+	a.ApplySettings()
+	a.SaveSettings()
 }
 
 func (a *app) resetFont() {
 	a.settings.FontSize = 13
-	a.applySettings()
-	a.saveSettings()
+	a.ApplySettings()
+	a.SaveSettings()
 }
 
 func (a *app) applyFont() {
@@ -345,7 +347,8 @@ func (a *app) openSettings() {
 		a.settingsWin.Focus()
 		return
 	}
-	a.settingsWin = newSettingsWindow(a)
+	a.settingsWin = settings.NewWindow(a, a.settings)
+	a.settingsWin.OnClosed(func() { a.settingsWin = nil })
 }
 
 // beginRename opens the rename dialog for the active session.

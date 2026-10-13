@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"nutty/settings"
+
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )
@@ -16,7 +18,7 @@ func testApp() *app {
 	newTerminal = func(terminal.Options) (*terminal.Terminal, error) {
 		return nil, errors.New("stub: no terminal in tests")
 	}
-	return &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+	return &app{settings: settings.Default(), sideOpen: true, agent: &demoAgent{}}
 }
 
 // TestWindowLayouts checks that the window draws in each of the three

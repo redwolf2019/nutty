@@ -1,4 +1,4 @@
-package main
+package settings
 
 // extraSettings are the otty config keys with no field of their own.
 // The All Settings list edits them through settings.Extra; they persist,

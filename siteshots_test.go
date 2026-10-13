@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"nutty/settings"
+
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )
@@ -36,10 +38,10 @@ func TestSiteShots(t *testing.T) {
 	}
 	render := func(name string, panel panelMode, dark bool) {
 		registerFonts()
-		lt, dt := ottyTermTheme(false), ottyTermTheme(true)
+		lt, dt := settings.OttyTermTheme(false), settings.OttyTermTheme(true)
 		term, err := terminal.New(terminal.Options{
 			Conn:      &scriptConn{data: []byte(siteScript)},
-			Font:      (&app{settings: defaultSettings()}).termFont(),
+			Font:      (&app{settings: settings.Default()}).termFont(),
 			Theme:     lt,
 			DarkTheme: dt,
 		})
@@ -53,7 +55,7 @@ func TestSiteShots(t *testing.T) {
 			root:    &node{term: p},
 			panes:   []*pane{p},
 		}
-		a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+		a := &app{settings: settings.Default(), sideOpen: true, agent: &demoAgent{}}
 		a.sessions = []*session{s}
 		a.active = 0
 		a.activePane = p

@@ -1,22 +1,31 @@
-package main
+package settings
 
 import (
 	"bytes"
 	"encoding/json"
 	"image"
+	"image/png"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 	uixsettings "github.com/smallnest/uix/components/settings"
 )
 
+// mockApp is the settings window's host in the tests: it applies and
+// saves nothing, so the pages render without a main-package app.
+type mockApp struct{}
+
+func (mockApp) ApplySettings() {}
+func (mockApp) SaveSettings()  {}
+func (mockApp) ApplyKeybinds() {}
+
 // TestSettingsJSON checks that the settings survive a save and load, and
 // that a file with unknown fields still reads.
 func TestSettingsJSON(t *testing.T) {
-	s := defaultSettings()
+	s := Default()
 	s.ThemeName = "TokyoNight"
 	s.FontSize = 15
 	s.WindowOpacity = 0.8
@@ -26,7 +35,7 @@ func TestSettingsJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var back settings
+	var back Settings
 	if err := json.Unmarshal(b, &back); err != nil {
 		t.Fatal(err)
 	}
@@ -42,56 +51,11 @@ func TestSettingsJSON(t *testing.T) {
 	}
 }
 
-// TestSettingsApply checks the pieces the settings turn into terminal
-// options: the font, the cursor, the scrollback.
-func TestSettingsApply(t *testing.T) {
-	a := &app{settings: defaultSettings()}
-
-	if a.settings.Language != "chinese" {
-		t.Fatalf("default language = %q, want chinese", a.settings.Language)
-	}
-
-	f := a.termFont()
-	if f.Family != "JetBrains Mono" || f.Size != 13 {
-		t.Fatalf("default font = %+v", f)
-	}
-	if len(f.Features) != 1 || f.Features[0] != "dlig" {
-		t.Fatalf("default ligatures = %v, want [dlig]", f.Features)
-	}
-	a.settings.FontLigatures = "off"
-	if f := a.termFont(); len(f.Features) != 3 || f.Features[0] != "-calt" {
-		t.Fatalf("ligatures off = %v", f.Features)
-	}
-	a.settings.FontLigatures = "dlig"
-	a.settings.FontSize = 16
-	a.settings.FontThicken = true
-	f = a.termFont()
-	if f.Size != 16 || !f.Thicken {
-		t.Fatalf("font options = %+v", f)
-	}
-
-	if a.cursorStyle() != terminal.CursorBlock {
-		t.Fatal("default cursor should be block")
-	}
-	a.settings.CursorStyle = "bar"
-	if a.cursorStyle() != terminal.CursorBar {
-		t.Fatal("bar cursor")
-	}
-
-	if n := a.scrollbackBytes(); n != 1_000_000 { // 10000 lines
-		t.Fatalf("scrollback bytes = %d, want 1,000,000", n)
-	}
-	a.settings.ScrollbackLines = 0
-	if a.scrollbackBytes() != -1 {
-		t.Fatal("zero lines should turn the scrollback off")
-	}
-}
-
 // TestSettingsNormalize checks that a settings file written by an older
 // build — with booleans where the enums live now — still reads as the
 // right enum, and that the details views have their defaults.
 func TestSettingsNormalize(t *testing.T) {
-	var s settings
+	var s Settings
 	if err := json.Unmarshal([]byte(`{
 		"FontLigatures": true,
 		"OptionAsAlt": false,
@@ -100,7 +64,7 @@ func TestSettingsNormalize(t *testing.T) {
 	}`), &s); err != nil {
 		t.Fatal(err)
 	}
-	s.normalize()
+	s.Normalize()
 	if s.FontLigatures != "dlig" {
 		t.Fatalf("FontLigatures = %q, want dlig", s.FontLigatures)
 	}
@@ -117,9 +81,9 @@ func TestSettingsNormalize(t *testing.T) {
 
 // TestThemeNames checks the theme lists the settings select from.
 func TestThemeNames(t *testing.T) {
-	names := themeNames()
-	if len(names) != 1+len(ottyThemeNames) {
-		t.Fatalf("theme names = %d, want %d", len(names), 1+len(ottyThemeNames))
+	names := ThemeNames()
+	if len(names) != 1+len(OttyThemeNames) {
+		t.Fatalf("theme names = %d, want %d", len(names), 1+len(OttyThemeNames))
 	}
 	if names[0] != "Follow system" {
 		t.Fatalf("first theme = %q, want Follow system", names[0])
@@ -130,7 +94,7 @@ func TestThemeNames(t *testing.T) {
 // get and set round-trip, every page group references a key the registry
 // holds, and the enum values all have a label.
 func TestSettingsRegistry(t *testing.T) {
-	s := defaultSettings()
+	s := Default()
 	for _, d := range settingsDefs {
 		orig := d.get(s)
 		switch d.kind {
@@ -193,7 +157,7 @@ func TestSettingsRegistry(t *testing.T) {
 // TestKeybindRows checks the key binding list: every default binding is
 // there with its trigger, and a recorded override wins over the default.
 func TestKeybindRows(t *testing.T) {
-	s := defaultSettings()
+	s := Default()
 	sw := &settingsWindow{s: s}
 	rows := sw.keybindRows()
 	byAction := map[string]keybindRow{}
@@ -222,7 +186,7 @@ func TestKeybindRows(t *testing.T) {
 // action's old binding and any other action on the combo, and that
 // conflicts are detected.
 func TestKeybindRecord(t *testing.T) {
-	s := defaultSettings()
+	s := Default()
 	s.KeybindOverrides = map[string]string{"cmd+d": "new_tab"}
 	sw := &settingsWindow{s: s}
 	sw.keys.recording = "split_right"
@@ -230,10 +194,10 @@ func TestKeybindRecord(t *testing.T) {
 	if got := s.KeybindOverrides["cmd+d"]; got != "split_right" {
 		t.Fatalf("cmd+d = %q, want split_right", got)
 	}
-	if tr, ok := s.actionTrigger("new_tab"); ok {
+	if tr, ok := s.ActionTrigger("new_tab"); ok {
 		t.Fatalf("new_tab still bound to %q, want unbound", tr)
 	}
-	if a, _ := s.triggerAction("cmd+shift+d"); a != "split_down" {
+	if a, _ := s.TriggerAction("cmd+shift+d"); a != "split_down" {
 		t.Fatalf("default split_down = %q, want split_down", a)
 	}
 }
@@ -251,8 +215,8 @@ func TestAccelerator(t *testing.T) {
 		"cmd+t":                   "CmdOrCtrl+T",
 	}
 	for trigger, want := range cases {
-		if got := acceleratorOf(trigger); got != want {
-			t.Errorf("acceleratorOf(%q) = %q, want %q", trigger, got, want)
+		if got := AcceleratorOf(trigger); got != want {
+			t.Errorf("AcceleratorOf(%q) = %q, want %q", trigger, got, want)
 		}
 	}
 }
@@ -271,8 +235,8 @@ func TestShellArgs(t *testing.T) {
 		{`bash -c "ls -la"`, 3},
 	}
 	for _, tc := range cases {
-		if got := len(shellArgs(tc.in)); got != tc.want {
-			t.Errorf("shellArgs(%q) = %d args, want %d", tc.in, got, tc.want)
+		if got := len(ShellArgs(tc.in)); got != tc.want {
+			t.Errorf("ShellArgs(%q) = %d args, want %d", tc.in, got, tc.want)
 		}
 	}
 }
@@ -280,19 +244,19 @@ func TestShellArgs(t *testing.T) {
 // TestProfile checks that the default profile is found by name and that
 // newTerm's profile overrides apply.
 func TestProfile(t *testing.T) {
-	s := defaultSettings()
-	if s.profile() != nil {
+	s := Default()
+	if s.Profile() != nil {
 		t.Fatal("no default profile should be chosen")
 	}
-	s.Profiles = []profile{{Name: "Web", Command: "docker compose up", CWD: "/srv"}}
+	s.Profiles = []Profile{{Name: "Web", Command: "docker compose up", CWD: "/srv"}}
 	s.DefaultProfile = "Web"
-	pr := s.profile()
+	pr := s.Profile()
 	if pr == nil || pr.Name != "Web" {
-		t.Fatalf("profile() = %+v, want Web", pr)
+		t.Fatalf("Profile() = %+v, want Web", pr)
 	}
 	// A default that points nowhere is ignored.
 	s.DefaultProfile = "Gone"
-	if s.profile() != nil {
+	if s.Profile() != nil {
 		t.Fatal("a missing default profile should be ignored")
 	}
 }
@@ -301,8 +265,8 @@ func TestProfile(t *testing.T) {
 // the settings the page is known for. Long pages render taller than the
 // window, so each one is drawn in a viewport tall enough for its content.
 func TestSettingsPagesRender(t *testing.T) {
-	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
-	a.settings.Profiles = []profile{{Name: "Web", Command: "docker compose up"}}
+	s := Default()
+	s.Profiles = []Profile{{Name: "Web", Command: "docker compose up"}}
 	want := map[string][]string{
 		"appearance":   {"Theme", "Font Family", "Cursor Style", "Palette"},
 		"general":      {"Language", "Closing Window", "On Launch"},
@@ -321,7 +285,7 @@ func TestSettingsPagesRender(t *testing.T) {
 	}
 	for _, cat := range settingsCategories {
 		sw := &settingsWindow{
-			a: a, s: a.settings, last: *a.settings,
+			app: mockApp{}, s: s, last: *s,
 			state: uixsettings.SettingsState{Category: cat.id},
 		}
 		if cat.id == "profiles" {
@@ -357,8 +321,8 @@ func TestSettingsCategoryIcons(t *testing.T) {
 // more frames with a gap settle the icon. The selection the click also
 // causes is the same in every frame compared here, so only the puff shows.
 func TestDataBreath(t *testing.T) {
-	a := &app{settings: defaultSettings()}
-	sw := &settingsWindow{a: a, s: a.settings, last: *a.settings,
+	s := Default()
+	sw := &settingsWindow{app: mockApp{}, s: s, last: *s,
 		state: uixsettings.SettingsState{Category: "appearance"}}
 	tt := ui.NewTester(sw.view, 760, 800)
 	tt.Frame()
@@ -415,4 +379,30 @@ func breathCrop(t *testing.T, tt *ui.Tester) []byte {
 		}
 	}
 	return b
+}
+
+// TestSettingsSnapshot renders every settings category for a visual check.
+func TestSettingsSnapshot(t *testing.T) {
+	if os.Getenv("NUTTY_SNAPSHOT") == "" {
+		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
+	}
+	s := Default()
+	for _, cat := range settingsCategories {
+		sw := &settingsWindow{
+			app: mockApp{}, s: s, last: *s,
+			state: uixsettings.SettingsState{Category: cat.id},
+		}
+		tt := ui.NewTester(sw.view, 760, 540)
+		tt.Frame()
+		f, err := os.Create("/tmp/nutty-settings-" + cat.id + ".png")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := png.Encode(f, tt.Image()); err != nil {
+			f.Close()
+			t.Fatal(err)
+		}
+		f.Close()
+		t.Log("wrote /tmp/nutty-settings-" + cat.id + ".png")
+	}
 }

@@ -8,8 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/egoist/mygo/ui"
+	"nutty/settings"
+
 	"github.com/egoist/mygo/plugins/terminal"
+	"github.com/egoist/mygo/ui"
 	"github.com/smallnest/uix/components/split"
 )
 
@@ -94,28 +96,28 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 	theme, darkTheme := a.termThemes()
 	dir := s.dir
 	command := a.settings.Command
-	env := a.settings.envList()
+	env := a.settings.EnvList()
 	// The default profile overrides what new sessions run and where, and
 	// may pick its own themes, as otty's profiles do.
-	if pr := a.settings.profile(); pr != nil {
+	if pr := a.settings.Profile(); pr != nil {
 		if pr.Command != "" {
 			command = pr.Command
 		}
 		if pr.CWD != "" {
 			dir = pr.CWD
 		}
-		env = append(append([]string{}, env...), validEnv(pr.Env)...)
+		env = append(append([]string{}, env...), settings.ValidEnv(pr.Env)...)
 		if pr.Theme != "" || pr.ThemeDark != "" {
-			light := themeFor(pr.Theme, false)
-			dark := themeFor(pr.ThemeDark, true)
+			light := settings.ThemeFor(pr.Theme, false)
+			dark := settings.ThemeFor(pr.ThemeDark, true)
 			if pr.ThemeDark == "" {
-				dark = themeFor(pr.Theme, true)
+				dark = settings.ThemeFor(pr.Theme, true)
 			}
 			theme, darkTheme = light, dark
 		}
 	}
 	term, err := newTerminal(terminal.Options{
-		Command:     shellArgs(command),
+		Command:     settings.ShellArgs(command),
 		Dir:         dir,
 		Env:         env,
 		Font:        a.termFont(),

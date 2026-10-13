@@ -3,6 +3,8 @@ package main
 import (
 	"testing"
 
+	"nutty/settings"
+
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 	"github.com/smallnest/uix/components/tree"
@@ -15,15 +17,15 @@ func TestTrackWorkingDir(t *testing.T) {
 	registerFonts()
 	term, err := terminal.New(terminal.Options{
 		Conn:  &scriptConn{data: []byte("\x1b]7;file://localhost/tmp/elsewhere\x07")},
-		Font:  (&app{settings: defaultSettings()}).termFont(),
-		Theme: ottyTermTheme(false),
+		Font:  (&app{settings: settings.Default()}).termFont(),
+		Theme: settings.OttyTermTheme(false),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	p := &pane{term: term}
 	s := &session{id: 1, dir: "/start", root: &node{term: p}, panes: []*pane{p}}
-	a := &app{settings: defaultSettings(), sessions: []*session{s}, active: 0, activePane: p}
+	a := &app{settings: settings.Default(), sessions: []*session{s}, active: 0, activePane: p}
 	ui.NewTester(a.view, 800, 400).Frame()
 	a.trackWorkingDir()
 	if s.dir != "/tmp/elsewhere" {
@@ -38,15 +40,15 @@ func TestInfoFollowsDir(t *testing.T) {
 	registerFonts()
 	term, err := terminal.New(terminal.Options{
 		Conn:  &scriptConn{data: []byte("\x1b]7;file://localhost/tmp/elsewhere\x07")},
-		Font:  (&app{settings: defaultSettings()}).termFont(),
-		Theme: ottyTermTheme(false),
+		Font:  (&app{settings: settings.Default()}).termFont(),
+		Theme: settings.OttyTermTheme(false),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	p := &pane{term: term}
 	s := &session{id: 1, dir: "/start", root: &node{term: p}, panes: []*pane{p}}
-	a := &app{settings: defaultSettings(), sessions: []*session{s}, active: 0, activePane: p}
+	a := &app{settings: settings.Default(), sessions: []*session{s}, active: 0, activePane: p}
 	a.info = infoState{
 		tab:       infoTabGit,
 		git:       gitState{done: true, branch: "old", changes: []gitChange{{" M", "old.go"}}},

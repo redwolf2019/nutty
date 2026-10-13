@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"nutty/settings"
+
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
-	uixsettings "github.com/smallnest/uix/components/settings"
 	"github.com/smallnest/uix/components/tree"
 )
 
@@ -46,10 +47,10 @@ func TestSnapshot(t *testing.T) {
 		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
 	}
 	registerFonts()
-	lt, dt := ottyTermTheme(false), ottyTermTheme(true)
+	lt, dt := settings.OttyTermTheme(false), settings.OttyTermTheme(true)
 	term, err := terminal.New(terminal.Options{
 		Conn:      &scriptConn{data: []byte(previewScript)},
-		Font:      (&app{settings: defaultSettings()}).termFont(),
+		Font:      (&app{settings: settings.Default()}).termFont(),
 		Theme:     lt,
 		DarkTheme: dt,
 	})
@@ -63,7 +64,7 @@ func TestSnapshot(t *testing.T) {
 		root:    &node{term: p},
 		panes:   []*pane{p},
 	}
-	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+	a := &app{settings: settings.Default(), sideOpen: true, agent: &demoAgent{}}
 	a.sessions = []*session{s}
 	a.active = 0
 	a.activePane = p
@@ -109,10 +110,10 @@ func TestStripToggles(t *testing.T) {
 		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
 	}
 	registerFonts()
-	lt, dt := ottyTermTheme(false), ottyTermTheme(true)
+	lt, dt := settings.OttyTermTheme(false), settings.OttyTermTheme(true)
 	term, err := terminal.New(terminal.Options{
 		Conn:      &scriptConn{data: []byte(previewScript)},
-		Font:      (&app{settings: defaultSettings()}).termFont(),
+		Font:      (&app{settings: settings.Default()}).termFont(),
 		Theme:     lt,
 		DarkTheme: dt,
 	})
@@ -127,7 +128,7 @@ func TestStripToggles(t *testing.T) {
 		panes:   []*pane{p},
 	}
 	render := func(name string, layout string, sideOpen bool, hoverX float32) {
-		a := &app{settings: defaultSettings(), sideOpen: sideOpen, agent: &demoAgent{}}
+		a := &app{settings: settings.Default(), sideOpen: sideOpen, agent: &demoAgent{}}
 		a.settings.WindowLayout = layout
 		a.sessions = []*session{s}
 		a.active = 0
@@ -168,10 +169,10 @@ func TestInfoTabs(t *testing.T) {
 		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
 	}
 	registerFonts()
-	lt, dt := ottyTermTheme(false), ottyTermTheme(true)
+	lt, dt := settings.OttyTermTheme(false), settings.OttyTermTheme(true)
 	term, err := terminal.New(terminal.Options{
 		Conn:      &scriptConn{data: []byte(previewScript)},
-		Font:      (&app{settings: defaultSettings()}).termFont(),
+		Font:      (&app{settings: settings.Default()}).termFont(),
 		Theme:     lt,
 		DarkTheme: dt,
 	})
@@ -204,7 +205,7 @@ func TestInfoTabs(t *testing.T) {
 		t.Log("wrote /tmp/nutty-" + name + ".png")
 	}
 	base := func() *app {
-		a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+		a := &app{settings: settings.Default(), sideOpen: true, agent: &demoAgent{}}
 		a.sessions = []*session{s}
 		a.active = 0
 		a.activePane = p
@@ -306,32 +307,6 @@ func TestLayoutSnapshot(t *testing.T) {
 	}
 }
 
-// TestSettingsSnapshot renders every settings category for a visual check.
-func TestSettingsSnapshot(t *testing.T) {
-	if os.Getenv("NUTTY_SNAPSHOT") == "" {
-		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
-	}
-	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
-	for _, cat := range settingsCategories {
-		sw := &settingsWindow{
-			a: a, s: a.settings, last: *a.settings,
-			state: uixsettings.SettingsState{Category: cat.id},
-		}
-		tt := ui.NewTester(sw.view, 760, 540)
-		tt.Frame()
-		f, err := os.Create("/tmp/nutty-settings-" + cat.id + ".png")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := png.Encode(f, tt.Image()); err != nil {
-			f.Close()
-			t.Fatal(err)
-		}
-		f.Close()
-		t.Log("wrote /tmp/nutty-settings-" + cat.id + ".png")
-	}
-}
-
 // TestFilesPanel renders the window with the Files panel open on the right,
 // its tree the working directory's real files:
 // NUTTY_SNAPSHOT=1 go test -run TestFilesPanel.
@@ -340,10 +315,10 @@ func TestFilesPanel(t *testing.T) {
 		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
 	}
 	registerFonts()
-	lt, dt := ottyTermTheme(false), ottyTermTheme(true)
+	lt, dt := settings.OttyTermTheme(false), settings.OttyTermTheme(true)
 	term, err := terminal.New(terminal.Options{
 		Conn:      &scriptConn{data: []byte(previewScript)},
-		Font:      (&app{settings: defaultSettings()}).termFont(),
+		Font:      (&app{settings: settings.Default()}).termFont(),
 		Theme:     lt,
 		DarkTheme: dt,
 	})
@@ -357,7 +332,7 @@ func TestFilesPanel(t *testing.T) {
 		root:    &node{term: p},
 		panes:   []*pane{p},
 	}
-	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
+	a := &app{settings: settings.Default(), sideOpen: true, agent: &demoAgent{}}
 	a.sessions = []*session{s}
 	a.active = 0
 	a.activePane = p

@@ -7,13 +7,17 @@ package main
 import (
 	"log"
 
+	"nutty/settings"
+
 	"github.com/egoist/mygo"
 )
 
 func main() {
 	mygo.App.WhenReady(func() {
 		registerFonts()
-		setAppMenu(loadSettings())
+		s := settings.Load()
+		setUILang(s.Language)
+		setAppMenu(s)
 		newWindow()
 	})
 	if err := mygo.App.Run(); err != nil {

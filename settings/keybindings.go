@@ -1,8 +1,10 @@
-package main
+package settings
 
 import (
 	"fmt"
 	"strings"
+
+	"nutty/i18n"
 
 	"github.com/egoist/mygo/ui"
 	"github.com/oneo-me/onevra/source/icons/lucide"
@@ -38,11 +40,11 @@ func (sw *settingsWindow) pageKeyBindings(c *ui.Context) {
 		})
 		if len(sw.s.KeybindOverrides) > 0 {
 			rb := ui.ButtonBase(c.Key("kb-reset-all")).Padding(4, 10).Radius(t.Radius).
-				FocusRing(false).Tooltip("Restore every otty default")
+				FocusRing(false).Tooltip(i18n.Tr("Restore every otty default"))
 			rb.Children(func() {
 				ui.Row(c).Gap(4).Children(func() {
 					ui.Image(c, lucide.RotateCcw()).Size(12, 12)
-					ui.Text(c, "Reset to Default").FontSize(12).TextColor(t.TextMuted)
+					ui.Text(c, i18n.Tr("Reset to Default")).FontSize(12).TextColor(t.TextMuted)
 				})
 			})
 			if rb.Clicked() {
@@ -54,7 +56,7 @@ func (sw *settingsWindow) pageKeyBindings(c *ui.Context) {
 	if sw.keys.recording != "" {
 		ui.Row(c).Gap(6).Children(func() {
 			ui.Image(c, lucide.Keyboard()).Size(13, 13)
-			ui.Text(c, "Press a shortcut…  (Esc to cancel)").FontSize(11).TextColor(t.Accent)
+			ui.Text(c, i18n.Tr("Press a shortcut…  (Esc to cancel)")).FontSize(11).TextColor(t.Accent)
 		})
 	}
 	sw.keybindList(c)
@@ -65,7 +67,7 @@ func (sw *settingsWindow) pageKeyBindings(c *ui.Context) {
 func (sw *settingsWindow) keybindList(c *ui.Context) {
 	rows := sw.keybindRows()
 	if len(rows) == 0 {
-		sw.hint(c, "No matching key bindings")
+		sw.hint(c, i18n.Tr("No matching key bindings"))
 		return
 	}
 	group := ""
@@ -75,7 +77,7 @@ func (sw *settingsWindow) keybindList(c *ui.Context) {
 			group = g
 			t := c.Theme()
 			ui.Box(c).FillWidth().Height(10)
-			ui.Text(c, group).FontSize(12).Bold().TextColor(t.TextMuted)
+			ui.Text(c, i18n.Tr(group)).FontSize(12).Bold().TextColor(t.TextMuted)
 		}
 		sw.keybindRow(c, r)
 	}
@@ -99,7 +101,7 @@ func (sw *settingsWindow) keybindRows() []keybindRow {
 		if label == "" {
 			label = action
 		}
-		trigger, overridden := sw.s.actionTrigger(action)
+		trigger, overridden := sw.s.ActionTrigger(action)
 		rows = append(rows, keybindRow{action: action, label: label, trigger: trigger, overridden: overridden})
 	}
 	for _, kb := range defaultKeybinds {
@@ -111,7 +113,8 @@ func (sw *settingsWindow) keybindRows() []keybindRow {
 	if q := strings.ToLower(sw.keys.search); q != "" {
 		filtered := rows[:0]
 		for _, r := range rows {
-			if strings.Contains(strings.ToLower(r.label), q) || strings.Contains(strings.ToLower(r.trigger), q) {
+			if strings.Contains(strings.ToLower(r.label), q) || strings.Contains(strings.ToLower(i18n.Tr(r.label)), q) ||
+				strings.Contains(strings.ToLower(r.trigger), q) {
 				filtered = append(filtered, r)
 			}
 		}
@@ -125,27 +128,27 @@ func (sw *settingsWindow) keybindRows() []keybindRow {
 func (sw *settingsWindow) keybindRow(c *ui.Context, r keybindRow) {
 	t := c.Theme()
 	ui.Row(c).FillWidth().Gap(8).Children(func() {
-		ui.Text(c, r.label).FontSize(13).SingleLine().Grow(1).MinWidth(0).TextColor(t.Text)
+		ui.Text(c, i18n.Tr(r.label)).FontSize(13).SingleLine().Grow(1).MinWidth(0).TextColor(t.Text)
 		if r.overridden && r.trigger != "" {
-			cb := ui.ButtonBase(c.Key("kb-clear-" + r.action)).Padding(4, 5).Radius(t.Radius).
-				FocusRing(false).Tooltip("Use the default shortcut")
+			cb := ui.ButtonBase(c.Key("kb-clear-"+r.action)).Padding(4, 5).Radius(t.Radius).
+				FocusRing(false).Tooltip(i18n.Tr("Use the default shortcut"))
 			cb.Children(func() { ui.Image(c, lucide.X()).Size(12, 12) })
 			if cb.Clicked() {
 				delete(sw.s.KeybindOverrides, r.trigger)
 				sw.rebind()
 			}
 		}
-		chip := ui.ButtonBase(c.Key("kb-" + r.action)).Padding(4, 10).Radius(999).
-			FocusRing(false).Tooltip("Click to rebind")
+		chip := ui.ButtonBase(c.Key("kb-"+r.action)).Padding(4, 10).Radius(999).
+			FocusRing(false).Tooltip(i18n.Tr("Click to rebind"))
 		if sw.keys.recording == r.action {
 			chip.Background(t.Accent)
 			chip.Children(func() {
-				ui.Text(c, "Press a shortcut…").FontSize(12).TextColor(t.AccentText)
+				ui.Text(c, i18n.Tr("Press a shortcut…")).FontSize(12).TextColor(t.AccentText)
 			})
 		} else if r.trigger == "" {
 			chip.Border(1, t.Border)
 			chip.Children(func() {
-				ui.Text(c, "No shortcut").FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, i18n.Tr("No shortcut")).FontSize(12).TextColor(t.TextMuted)
 			})
 		} else {
 			chip.Border(1, t.Border)
@@ -160,8 +163,12 @@ func (sw *settingsWindow) keybindRow(c *ui.Context, r keybindRow) {
 				sw.keys.recording = r.action
 			}
 		}
-		if other, ok := sw.s.triggerAction(r.trigger); sw.keys.recording != r.action && ok && other != r.action {
-			ui.Text(c, "Conflicts with: "+keybindActions[strings.ReplaceAll(other, ":", "_")]).
+		if other, ok := sw.s.TriggerAction(r.trigger); sw.keys.recording != r.action && ok && other != r.action {
+			name := keybindActions[strings.ReplaceAll(other, ":", "_")]
+			if name == "" {
+				name = other
+			}
+			ui.Text(c, fmt.Sprintf(i18n.Tr("Conflicts with: %s"), i18n.Tr(name))).
 				FontSize(10).TextColor(t.Danger)
 		}
 	})
@@ -314,20 +321,14 @@ func (sw *settingsWindow) recordCombo(combo string) {
 // rebind applies the key bindings to the menu after a change, when there
 // is a window; the tests build the page without one.
 func (sw *settingsWindow) rebind() {
-	if sw.a != nil {
-		sw.a.applyKeybinds()
+	if sw.app != nil {
+		sw.app.ApplyKeybinds()
 	}
-}
-
-// applyKeybinds rebuilds the application menu, whose accelerators come
-// from the key bindings.
-func (a *app) applyKeybinds() {
-	setAppMenu(a.settings)
 }
 
 // actionTrigger is the trigger bound to an action: the recorded override,
 // or otty's default. The second result reports whether it is an override.
-func (s *settings) actionTrigger(action string) (string, bool) {
+func (s *Settings) ActionTrigger(action string) (string, bool) {
 	for t, a := range s.KeybindOverrides {
 		if a == action {
 			return t, true
@@ -343,7 +344,7 @@ func (s *settings) actionTrigger(action string) (string, bool) {
 
 // triggerAction is the action bound to a trigger: the recorded override,
 // or otty's default. The second result reports whether it is an override.
-func (s *settings) triggerAction(trigger string) (string, bool) {
+func (s *Settings) TriggerAction(trigger string) (string, bool) {
 	if a, ok := s.KeybindOverrides[trigger]; ok {
 		return a, true
 	}
@@ -395,7 +396,7 @@ func keybindGroupOf(action string) string {
 }
 
 // acceleratorOf is a mygo menu accelerator for an otty trigger, or "".
-func acceleratorOf(trigger string) string {
+func AcceleratorOf(trigger string) string {
 	var mods []string
 	var key string
 	parts := strings.Split(trigger, "+")
@@ -418,33 +419,33 @@ func acceleratorOf(trigger string) string {
 		key = p
 	}
 	names := map[string]string{
-		"left_bracket":  "[",
-		"right_bracket": "]",
-		"comma":         ",",
-		"period":        ".",
-		"equal":         "=",
-		"minus":         "-",
-		"semicolon":     ";",
-		"quote":         "'",
-		"backslash":     "\\",
-		"slash":         "/",
-		"backtick":      "`",
-		"enter":         "Enter",
-		"space":         "Space",
-		"tab":           "Tab",
-		"backspace":     "Backspace",
+		"left_bracket":   "[",
+		"right_bracket":  "]",
+		"comma":          ",",
+		"period":         ".",
+		"equal":          "=",
+		"minus":          "-",
+		"semicolon":      ";",
+		"quote":          "'",
+		"backslash":      "\\",
+		"slash":          "/",
+		"backtick":       "`",
+		"enter":          "Enter",
+		"space":          "Space",
+		"tab":            "Tab",
+		"backspace":      "Backspace",
 		"forward_delete": "Delete",
-		"delete":        "Delete",
-		"escape":        "Escape",
-		"home":          "Home",
-		"end":           "End",
-		"up":            "Up",
-		"down":          "Down",
-		"left":          "Left",
-		"right":         "Right",
-		"page_up":       "PageUp",
-		"page_down":     "PageDown",
-		"insert":        "Insert",
+		"delete":         "Delete",
+		"escape":         "Escape",
+		"home":           "Home",
+		"end":            "End",
+		"up":             "Up",
+		"down":           "Down",
+		"left":           "Left",
+		"right":          "Right",
+		"page_up":        "PageUp",
+		"page_down":      "PageDown",
+		"insert":         "Insert",
 	}
 	if v, ok := names[key]; ok {
 		key = v
@@ -456,4 +457,3 @@ func acceleratorOf(trigger string) string {
 	mods = append(mods, key)
 	return strings.Join(mods, "+")
 }
-

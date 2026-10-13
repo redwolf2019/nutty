@@ -1,6 +1,8 @@
 package main
 
 import (
+	"nutty/settings"
+
 	"github.com/egoist/mygo/ui"
 	"github.com/smallnest/uix/components/command"
 )
@@ -11,7 +13,7 @@ import (
 // the panes in the middle, and the info or chat panel on the right. The
 // command palette overlays it all.
 func (a *app) view(c *ui.Context) {
-	c.SetTheme(ottyTheme(c.Theme().Dark))
+	c.SetTheme(settings.OttyTheme(c.Theme().Dark))
 	if a.settings.WindowLayout == "sidebar-left" {
 		a.viewSidebar(c)
 	} else {

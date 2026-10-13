@@ -3,6 +3,8 @@ package main
 import (
 	_ "embed"
 
+	"nutty/settings"
+
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )
@@ -41,7 +43,7 @@ func registerFonts() {
 func (a *app) termFont() terminal.Font {
 	s := a.settings
 	if s == nil {
-		s = defaultSettings()
+		s = settings.Default()
 	}
 	f := terminal.Font{Family: s.FontFamily, Size: float32(s.FontSize)}
 	if f.Family == "" {

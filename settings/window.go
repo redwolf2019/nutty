@@ -1,8 +1,11 @@
-package main
+package settings
 
 import (
 	"fmt"
 	"reflect"
+
+	"nutty/i18n"
+
 	"strings"
 	"time"
 
@@ -25,10 +28,10 @@ import (
 // and saved. It edits the app's settings in place, so the main window and
 // the settings agree.
 type settingsWindow struct {
-	a              *app
-	s              *settings
+	app            App
+	s              *Settings
 	win            *mygo.Window
-	last           settings                  // the applied snapshot; a difference means a change
+	last           Settings                  // the applied snapshot; a difference means a change
 	state          uixsettings.SettingsState // the category and search the shell shows
 	lastCat        string                    // the category of the last frame, the breath's hook
 	wells          colorWells
@@ -72,30 +75,27 @@ var settingsCategories = []struct{ id, title string }{
 	{"account", "Account"},
 }
 
-// newSettingsWindow opens the settings of the app: one window, reused.
-func newSettingsWindow(a *app) *mygo.Window {
-	sw := &settingsWindow{
-		a:     a,
-		s:     a.settings,
-		last:  *a.settings,
-		state: uixsettings.SettingsState{Category: "appearance"},
+// categoryTitle is a category's sidebar label in the interface language.
+func categoryTitle(id string) string {
+	for _, cat := range settingsCategories {
+		if cat.id == id {
+			return i18n.Tr(cat.title)
+		}
 	}
-	sw.win = mygo.NewWindow(mygo.WindowOptions{
-		Title:     "Settings",
-		Width:     760,
-		Height:    540,
-		MinWidth:  600,
-		MinHeight: 420,
-		Content:   ui.View(sw.view),
-	})
-	sw.win.OnClosed(func() { a.settingsWin = nil })
-	return sw.win
+	return i18n.Tr(id)
 }
 
 func (sw *settingsWindow) view(c *ui.Context) {
-	c.SetTheme(ottyTheme(c.Theme().Dark))
-	sw.syncColors() // the wells show the theme's colors before the controls draw
-	uixsettings.Settings(c, &sw.state, sw.settingsCategoriesFor(), uixsettings.SettingsOptions{})
+	c.SetTheme(OttyTheme(c.Theme().Dark))
+	i18n.SetLang(sw.s.Language) // the shell's chrome follows the setting
+	sw.syncColors()             // the wells show the theme's colors before the controls draw
+	uixsettings.Settings(c, &sw.state, sw.settingsCategoriesFor(), uixsettings.SettingsOptions{
+		Title:             i18n.Tr("Settings"),
+		SearchLabel:       i18n.Tr("Search settings"),
+		SearchPlaceholder: i18n.Tr("Search settings"),
+		ResultsTitle:      i18n.Tr("Search results"),
+		EmptyText:         i18n.Tr("No settings found"),
+	})
 	// The shell's own row click sets the selection; a click of the Data
 	// row also breathes its database icon, one cycle per click.
 	if sw.state.Category == "data" && sw.state.Category != sw.lastCat {
@@ -115,7 +115,7 @@ func (sw *settingsWindow) settingsCategoriesFor() []uixsettings.SettingsCategory
 	for _, cat := range settingsCategories {
 		cats = append(cats, uixsettings.SettingsCategory{
 			ID:      cat.id,
-			Title:   cat.title,
+			Title:   i18n.Tr(cat.title),
 			Leading: sw.categoryLeading(cat.id),
 			Groups:  sw.groupsFor(cat.id),
 		})
@@ -181,11 +181,11 @@ func (sw *settingsWindow) groupsFor(id string) []uixsettings.SettingsGroup {
 	case "advanced":
 		return []uixsettings.SettingsGroup{pageItem(func(c *ui.Context) { sw.pageAdvanced(c) })}
 	case "data":
-		return noticeGroup("Sync & Backup", "Not available in this build")
+		return noticeGroup(i18n.Tr("Sync & Backup"), i18n.Tr("Not available in this build"))
 	case "account":
-		return noticeGroup("Account", "Not signed in")
+		return noticeGroup(i18n.Tr("Account"), i18n.Tr("Not signed in"))
 	case "remote":
-		return noticeGroup("Remote", "Not available in this build.")
+		return noticeGroup(i18n.Tr("Remote"), i18n.Tr("Not available in this build."))
 	default:
 		return sw.registryGroups(id)
 	}
@@ -224,13 +224,13 @@ func (sw *settingsWindow) registryGroups(id string) []uixsettings.SettingsGroup 
 			if d := defByKey(key); d != nil {
 				d := *d
 				items = append(items, uixsettings.SettingsItem{
-					ID: d.key, Title: d.label, Description: d.desc,
+					ID: d.key, Title: i18n.Tr(d.label), Description: i18n.Tr(d.desc),
 					Keywords: []string{d.key},
 					Build:    func(c *ui.Context) { sw.control(c, d) },
 				})
 			}
 		}
-		groups = append(groups, uixsettings.SettingsGroup{ID: g.title, Title: g.title, Items: items})
+		groups = append(groups, uixsettings.SettingsGroup{ID: g.title, Title: i18n.Tr(g.title), Items: items})
 	}
 	return groups
 }
@@ -243,8 +243,8 @@ func (sw *settingsWindow) appearanceGroups() []uixsettings.SettingsGroup {
 	for i := range groups {
 		if groups[i].ID == "Colors" {
 			groups[i].Items = append(groups[i].Items, uixsettings.SettingsItem{
-				ID: "palette", Title: "Palette",
-				Description: "The sixteen ANSI colors of the terminal palette.",
+				ID: "palette", Title: i18n.Tr("Palette"),
+				Description: i18n.Tr("The sixteen ANSI colors of the terminal palette."),
 				Keywords:    []string{"palette", "ansi", "color"},
 				Build:       func(c *ui.Context) { sw.paletteGrid(c) },
 			})
@@ -257,15 +257,15 @@ func (sw *settingsWindow) appearanceGroups() []uixsettings.SettingsGroup {
 // Panel's tabs, each with its enable switch and the arrows to reorder it.
 func (sw *settingsWindow) viewGroups() []uixsettings.SettingsGroup {
 	groups := sw.registryGroups("view")
-	details := uixsettings.SettingsGroup{ID: "Details Panel", Title: "Details Panel"}
+	details := uixsettings.SettingsGroup{ID: "Details Panel", Title: i18n.Tr("Details Panel")}
 	for _, v := range sw.s.DetailsViews {
 		id, title := v.ID, v.Title
 		details.Items = append(details.Items, uixsettings.SettingsItem{
-			ID: id, Title: title,
-			Description: "A tab of the details panel on the right; the arrows reorder it.",
+			ID: id, Title: i18n.Tr(title),
+			Description: i18n.Tr("A tab of the details panel on the right; the arrows reorder it."),
 			Keywords:    []string{"details", "panel"},
 			Build: func(c *ui.Context) {
-				p := sw.detailsView(id)
+				p := sw.DetailsView(id)
 				if p == nil {
 					return
 				}
@@ -282,10 +282,10 @@ func (sw *settingsWindow) viewGroups() []uixsettings.SettingsGroup {
 	return append(groups, details)
 }
 
-// detailsView is the details panel's tab of an id, or nil. The item
+// DetailsView is the details panel's tab of an id, or nil. The item
 // looks it up on the frame it builds, so a reorder never leaves a stale
 // pointer behind.
-func (sw *settingsWindow) detailsView(id string) *detailsView {
+func (sw *settingsWindow) DetailsView(id string) *DetailsView {
 	for i := range sw.s.DetailsViews {
 		if sw.s.DetailsViews[i].ID == id {
 			return &sw.s.DetailsViews[i]
@@ -315,7 +315,7 @@ func (sw *settingsWindow) moveViewByID(id string, delta int) {
 	v[i], v[j] = v[j], v[i]
 }
 
-// --- the settings' controls ------------------------------------------------
+// --- the Settings' controls ------------------------------------------------
 
 // control draws one setting's control alone: the shell's item row shows
 // the label and description, so only the control belongs here. The
@@ -357,13 +357,13 @@ func (sw *settingsWindow) renderSetting(c *ui.Context, d settingDef) {
 	switch d.kind {
 	case "bool":
 		uixswitch.Switch(c, uixswitch.Props{
-			On: d.ptr(sw.s).(*bool), Label: d.label,
+			On: d.ptr(sw.s).(*bool), Label: i18n.Tr(d.label),
 		})
 		if d.desc != "" {
-			sw.hint(c, d.desc)
+			sw.hint(c, i18n.Tr(d.desc))
 		}
 	case "enum":
-		field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+		field.Field(c, field.Props{Label: i18n.Tr(d.label), Hint: i18n.Tr(d.desc)}, func() {
 			labels := make([]string, len(d.enum))
 			for i, o := range d.enum {
 				labels[i] = o.label
@@ -376,17 +376,17 @@ func (sw *settingsWindow) renderSetting(c *ui.Context, d settingDef) {
 			}
 		})
 	case "number":
-		field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+		field.Field(c, field.Props{Label: i18n.Tr(d.label), Hint: i18n.Tr(d.desc)}, func() {
 			numberinput.NumberInput(c, numberinput.Props{
 				Value: d.ptr(sw.s).(*float64), Lo: d.lo, Hi: d.hi, Step: d.step,
 			})
 		})
 	case "string":
-		field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+		field.Field(c, field.Props{Label: i18n.Tr(d.label), Hint: i18n.Tr(d.desc)}, func() {
 			input.Input(c, input.Props{Value: d.ptr(sw.s).(*string)})
 		})
 	case "list":
-		field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+		field.Field(c, field.Props{Label: i18n.Tr(d.label), Hint: i18n.Tr(d.desc)}, func() {
 			sw.renderList(c, d)
 		})
 	case "color":
@@ -394,21 +394,25 @@ func (sw *settingsWindow) renderSetting(c *ui.Context, d settingDef) {
 	}
 }
 
-// renderEnum is the select of an enum setting: it shows the option
-// labels but stores the option values, so a value with a friendlier
-// label (like "Off (typing accents)" for false) still saves the key.
+// enumLabel is the select of an enum setting: it shows the option
+// labels in the interface language but stores the option values, so a
+// value with a friendlier label (like "Off (typing accents)" for
+// false) still saves the key.
 func enumLabel(d settingDef, v string) string {
 	for _, o := range d.enum {
 		if o.value == v {
-			return o.label
+			return i18n.Tr(o.label)
 		}
 	}
 	return v
 }
 
+// enumValue maps a shown label back to its stored value. It accepts the
+// label in either language, so a select toggled mid-transition still
+// round-trips.
 func enumValue(d settingDef, label string) string {
 	for _, o := range d.enum {
-		if o.label == label {
+		if o.label == label || i18n.Tr(o.label) == label {
 			return o.value
 		}
 	}
@@ -451,7 +455,7 @@ func splitLines(s string) []string {
 // the well, and a Reset that forgets the setting and returns the well to
 // the theme's color.
 func (sw *settingsWindow) renderColorRow(c *ui.Context, d settingDef) {
-	field.Field(c, field.Props{Label: d.label, Hint: d.desc}, func() {
+	field.Field(c, field.Props{Label: i18n.Tr(d.label), Hint: i18n.Tr(d.desc)}, func() {
 		sw.colorControls(c, d)
 	})
 }
@@ -462,14 +466,14 @@ func (sw *settingsWindow) colorControls(c *ui.Context, d settingDef) {
 	t := c.Theme()
 	st := sw.wellState(d)
 	ui.Row(c).Gap(12).Children(func() {
-		colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: d.label})
+		colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: i18n.Tr(d.label)})
 		if st.inUse {
 			rb := ui.ButtonBase(c.Key("reset-"+d.key)).Padding(2, 8).Radius(t.Radius).
-				FocusRing(false).Tooltip("Use the theme's color")
+				FocusRing(false).Tooltip(i18n.Tr("Use the theme's color"))
 			rb.Children(func() {
 				ui.Row(c).Gap(4).Children(func() {
 					ui.Image(c, lucide.RotateCcw()).Size(12, 12)
-					ui.Text(c, "Reset").FontSize(12).TextColor(t.TextMuted)
+					ui.Text(c, i18n.Tr("Reset")).FontSize(12).TextColor(t.TextMuted)
 				})
 			})
 			if rb.Clicked() {
@@ -518,17 +522,17 @@ func (sw *settingsWindow) paletteGrid(c *ui.Context) {
 					i := row*4 + col
 					d := *defByKey(fmt.Sprintf("palette-%d", i))
 					st := sw.wellState(d)
-					colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: d.label})
+					colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: i18n.Tr(d.label)})
 				}
 			})
 		}
-		if sw.s.anyPalette() {
+		if sw.s.AnyPalette() {
 			rb := ui.ButtonBase(c.Key("reset-palette")).Padding(2, 8).Radius(t.Radius).
-				FocusRing(false).Tooltip("Use the theme's colors")
+				FocusRing(false).Tooltip(i18n.Tr("Use the theme's colors"))
 			rb.Children(func() {
 				ui.Row(c).Gap(4).Children(func() {
 					ui.Image(c, lucide.RotateCcw()).Size(12, 12)
-					ui.Text(c, "Reset palette").FontSize(12).TextColor(t.TextMuted)
+					ui.Text(c, i18n.Tr("Reset palette")).FontSize(12).TextColor(t.TextMuted)
 				})
 			})
 			if rb.Clicked() {
@@ -568,19 +572,24 @@ func (sw *settingsWindow) hint(c *ui.Context, text string) {
 // that means following the window.
 func (sw *settingsWindow) sync() {
 	if !reflect.DeepEqual(*sw.s, sw.last) {
+		// A change of language redraws the menu with translated labels.
+		if sw.last.Language != sw.s.Language {
+			i18n.SetLang(sw.s.Language)
+			sw.app.ApplyKeybinds()
+		}
 		sw.last = *sw.s
-		sw.a.applySettings()
-		sw.a.saveSettings()
+		sw.app.ApplySettings()
+		sw.app.SaveSettings()
 	}
 }
 
-// syncColors writes the color wells back into the settings: an unused
+// syncColors writes the color wells back into the Settings: an unused
 // well follows the theme's color, editing one makes the setting, and a
 // change of theme refreshes the unused ones.
 func (sw *settingsWindow) syncColors() {
-	th := themeFor(sw.s.ThemeName, false)
+	th := ThemeFor(sw.s.ThemeName, false)
 	if th == nil {
-		th = ottyTermTheme(false)
+		th = OttyTermTheme(false)
 	}
 	// The theme's cursor and selection are zero in the window colors; the
 	// terminal falls back to the foreground for the cursor and an accent
@@ -626,9 +635,9 @@ func (sw *settingsWindow) syncColors() {
 		if st.color != st.base {
 			st.inUse = true
 			st.base = st.color
-			set(colorHex(st.color))
+			set(ColorHex(st.color))
 		} else if st.inUse {
-			set(colorHex(st.color))
+			set(ColorHex(st.color))
 		}
 	}
 	for _, key := range []string{"foreground", "background", "cursor-color", "cursor-text", "selection-background", "selection-foreground"} {
@@ -666,9 +675,9 @@ func (sw *settingsWindow) syncColors() {
 		if st.color != st.base {
 			st.inUse = true
 			st.base = st.color
-			sw.s.Extra[x.key] = colorHex(st.color)
+			sw.s.Extra[x.key] = ColorHex(st.color)
 		} else if st.inUse {
-			sw.s.Extra[x.key] = colorHex(st.color)
+			sw.s.Extra[x.key] = ColorHex(st.color)
 		}
 	}
 	sw.wells.init = true
