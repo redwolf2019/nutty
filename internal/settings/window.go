@@ -1,8 +1,9 @@
 package settings
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"nutty/internal/i18n"
 
@@ -32,6 +33,7 @@ type settingsWindow struct {
 	s              *Settings
 	win            *mygo.Window
 	last           Settings                  // the applied snapshot; a difference means a change
+	lastJSON       []byte                    // the snapshot as JSON, what sync compares
 	state          uixsettings.SettingsState // the category and search the shell shows
 	lastCat        string                    // the category of the last frame, the breath's hook
 	wells          colorWells
@@ -559,15 +561,27 @@ func (sw *settingsWindow) hint(c *ui.Context, text string) {
 
 // sync applies and saves whatever differs from the last applied snapshot.
 // The selects store their "Follow system" theme choice as the empty name
-// that means following the window.
+// that means following the window. The snapshot it compares is the
+// settings' JSON: a copy of the struct shares its slices and maps with the
+// settings, so an edit made in place (a profile's field, a details view, a
+// key binding, an Extra key) never differed from the copy, and was not saved.
 func (sw *settingsWindow) sync() {
-	if !reflect.DeepEqual(*sw.s, sw.last) {
+	now, err := json.Marshal(sw.s)
+	if err != nil {
+		return
+	}
+	if sw.lastJSON == nil {
+		sw.lastJSON = now // the first frame: what the window opened with
+		return
+	}
+	if !bytes.Equal(now, sw.lastJSON) {
 		// A change of language redraws the menu with translated labels.
 		if sw.last.Language != sw.s.Language {
 			i18n.SetLang(sw.s.Language)
 			sw.app.ApplyKeybinds()
 		}
 		sw.last = *sw.s
+		sw.lastJSON = now
 		sw.app.ApplySettings()
 		sw.app.SaveSettings()
 	}
