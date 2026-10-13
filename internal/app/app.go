@@ -103,8 +103,10 @@ func newWindow() *app {
 		appsMu.Unlock()
 	})
 	// A change of appearance re-applies the terminals' colors, so the
-	// "follow system" terminals keep blending with the strip.
-	mygo.Theme.OnUpdated(func() { a.applyTheme() })
+	// "follow system" terminals keep blending with the strip. The listener
+	// holds the app, so it ends with the window: one left behind kept a
+	// closed window's sessions reachable and restyled them on each change.
+	a.win.OnClosed(mygo.Theme.OnUpdated(func() { a.applyTheme() }))
 	a.newSession("")
 	return a
 }
