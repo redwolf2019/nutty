@@ -9,6 +9,10 @@ Nutty is a native terminal app for macOS. It is a clone of
 The terminal emulator is Ghostty's, loaded through MyGo's terminal plugin.
 The app draws its own UI with MyGo's native toolkit. It uses no webview.
 
+## Screenshot
+
+![Nutty with the sessions rail, a running terminal, and the agent chat](docs/screenshot.png)
+
 ## Features
 
 - **Tabs and panes.** Each tab is a session that keeps running when you

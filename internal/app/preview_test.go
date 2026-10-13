@@ -16,13 +16,19 @@ import (
 
 // scriptConn is a read-only terminal source for previews: the terminal
 // shows script as the program's output, and typed input goes nowhere.
+// hold keeps the terminal connected after the script ends, so a preview
+// shows a live prompt and a cursor instead of "[Disconnected]".
 type scriptConn struct {
 	data []byte
 	off  int
+	hold bool
 }
 
 func (c *scriptConn) Read(p []byte) (int, error) {
 	if c.off >= len(c.data) {
+		if c.hold {
+			select {} // wait for the test to end, never EOF
+		}
 		return 0, io.EOF
 	}
 	n := copy(p, c.data[c.off:])
@@ -52,7 +58,7 @@ func TestSnapshot(t *testing.T) {
 	setUILang(settings.Default().Language)
 	lt, dt := settings.OttyTermTheme(false), settings.OttyTermTheme(true)
 	term, err := terminal.New(terminal.Options{
-		Conn:      &scriptConn{data: []byte(previewScript)},
+		Conn:      &scriptConn{data: []byte(previewScript), hold: true},
 		Font:      (&app{settings: settings.Default()}).termFont(),
 		Theme:     lt,
 		DarkTheme: dt,
