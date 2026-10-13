@@ -1,7 +1,6 @@
 package app
 
 import (
-	"os/exec"
 	"slices"
 	"sync"
 
@@ -307,7 +306,7 @@ func (a *app) copyPath() {
 
 func (a *app) revealInFinder() {
 	if s := a.currentSession(); s != nil {
-		_ = exec.Command("open", s.dir).Start()
+		openWith(s.dir)
 	}
 }
 
