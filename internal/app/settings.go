@@ -99,8 +99,21 @@ func (a *app) applyTermTheme() {
 }
 
 // termThemes is the pair of terminal themes the settings pick, or nil,nil
-// for the terminals to follow the window's appearance.
+// for the terminals to follow the window's appearance. The default
+// profile's themes, when it picks any, take the place of the settings'
+// whole, as otty's profiles do. They are decided here, for new panes and
+// for the ones a change of settings or of appearance restyles alike: a
+// new pane used to get the profile's themes and lose them again on the
+// next restyle.
 func (a *app) termThemes() (light, dark *terminal.Theme) {
+	if pr := a.settings.Profile(); pr != nil && (pr.Theme != "" || pr.ThemeDark != "") {
+		light = settings.ThemeFor(pr.Theme, false)
+		dark = settings.ThemeFor(pr.ThemeDark, true)
+		if pr.ThemeDark == "" {
+			dark = settings.ThemeFor(pr.Theme, true)
+		}
+		return light, dark
+	}
 	lightName := a.settings.ThemeName
 	darkName := a.settings.ThemeDark
 	if !a.settings.AutoThemeDark || darkName == "" {
