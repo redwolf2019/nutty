@@ -24,7 +24,7 @@ func TestSweepChrome(t *testing.T) {
 	defer i18n.SetRecording(false)
 	registerFonts()
 
-	render := func(name string, fn func(a *app)) {
+	render := func(name string, fn func(a *app)) *ui.Tester {
 		a := testApp()
 		a.settings = settings.Default()
 		a.sideOpen = true
@@ -33,6 +33,7 @@ func TestSweepChrome(t *testing.T) {
 		tt := ui.NewTester(a.view, 1280, 780)
 		tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})
 		tt.Frame()
+		return tt
 	}
 
 	// A pane with a shell, the rail, the title, and the info and chat
@@ -47,23 +48,41 @@ func TestSweepChrome(t *testing.T) {
 		a.activePane = p
 		a.sel = sessionID(1)
 	})
-	render("info", func(a *app) {
-		a.panel = panelInfo
-		a.info = infoState{ports: []string{"5173", "8000"}, portsDone: true,
-			outline: []string{"git status", "npm run dev"}, outlineDone: true,
-			git:   gitState{branch: "main", changes: []gitChange{{" M", "go.mod"}}, done: true},
-			files: []tree.Item{{Label: "a.go"}, {Label: "lib", Children: []tree.Item{{Label: "b.go"}}}}, filesDone: true}
-	})
-	render("info-empty", func(a *app) {
-		a.panel = panelInfo
-		a.info = infoState{portsDone: true, outlineDone: true, git: gitState{done: true}, filesDone: true}
-	})
-	render("git-diff", func(a *app) {
-		a.panel = panelInfo
-		a.info.tab = infoTabGit
-		a.info.git = gitState{branch: "main", done: true,
-			diffOpen: "go.mod", diffLines: []string{"+module nutty", "-module old"}}
-	})
+	// The info panel draws the one section that is open, so each section
+	// takes renders of its own: with what a session loads into it — the
+	// working directory's actions, a change with its diff open, a folder
+	// open in the tree — with nothing to show, and while it still loads.
+	open := true
+	for _, tab := range []infoTab{infoTabInfo, infoTabOutline, infoTabGit, infoTabFiles} {
+		tt := render("info", func(a *app) {
+			p := &pane{term: scriptTerm(t)}
+			a.sessions = []*session{{id: 1, dir: "/Users/smallnest/ai/nutty", root: &node{term: p}, panes: []*pane{p}}}
+			a.activePane = p
+			a.panel = panelInfo
+			a.info = infoState{tab: tab,
+				ports: []string{"5173", "8000"}, portsDone: true,
+				outline: []string{"git status", "npm run dev"}, outlineDone: true,
+				git: gitState{branch: "main", done: true,
+					changes:  []gitChange{{" M", "go.mod"}, {"??", "new.go"}},
+					diffOpen: "go.mod", diffLines: []string{"+module nutty", "-module old"}},
+				files: []tree.Item{{Label: "a.go"}, {Label: "lib", Open: &open, Children: []tree.Item{{Label: "b.go"}}}}, filesDone: true}
+		})
+		if tab == infoTabGit {
+			// A click on an untracked file says why it has no diff.
+			if err := tt.Click("new.go"); err != nil {
+				t.Fatal(err)
+			}
+			tt.Frame()
+		}
+		render("info-empty", func(a *app) {
+			a.panel = panelInfo
+			a.info = infoState{tab: tab, portsDone: true, outlineDone: true, git: gitState{done: true}, filesDone: true}
+		})
+		render("info-loading", func(a *app) {
+			a.panel = panelInfo
+			a.info = infoState{tab: tab}
+		})
+	}
 	render("chat", func(a *app) {
 		a.panel = panelChat
 		a.chat.busy = true
