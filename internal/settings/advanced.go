@@ -10,8 +10,6 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
-	"github.com/oneo-me/onevra/source/icons/lucide"
-	"github.com/smallnest/uix/components/colorwell"
 	"github.com/smallnest/uix/components/field"
 	"github.com/smallnest/uix/components/input"
 	"github.com/smallnest/uix/components/numberinput"
@@ -43,6 +41,8 @@ func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
 				sw.wells = colorWells{}
 				sw.lists = nil
 				sw.app.ApplySettings()
+				// The file may bind other keys: the menu shows them.
+				sw.app.ApplyKeybinds()
 			})
 		})
 	})
@@ -76,6 +76,8 @@ func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
 						sw.lists = nil
 						sw.app.ApplySettings()
 						sw.app.SaveSettings()
+						// The file may bind other keys: the menu shows them.
+						sw.app.ApplyKeybinds()
 					}
 				}
 			})
@@ -148,40 +150,22 @@ func (sw *settingsWindow) allSettingsList(c *ui.Context) {
 // renderExtra draws one unmodeled key's inline editor, reading and
 // writing it through Settings.Extra.
 func (sw *settingsWindow) renderExtra(c *ui.Context, x extraDef) {
-	t := c.Theme()
 	key := "extra:" + x.key
+	// A key has no field to bind, so the switch, the number and the text
+	// edit a local of this frame. Their Changed applies the input to the
+	// local now; without the query it lands after the frame, in a variable
+	// nothing reads again, and the edit is lost.
 	switch x.kind {
 	case "bool":
 		on := extraBool(sw.s, x.key)
-		uixswitch.Switch(c, uixswitch.Props{On: &on, Label: x.key})
-		if on != extraBool(sw.s, x.key) {
-			sw.s.Extra[x.key] = on
-		}
+		uixswitch.Switch(c, uixswitch.Props{On: &on, Label: x.key, Changed: func(v bool) {
+			sw.setExtra(x.key, v)
+		}})
 	case "number":
 		field.Field(c, field.Props{Label: x.key}, func() {
 			v := extraFloat(sw.s, x.key)
-			numberinput.NumberInput(c, numberinput.Props{Value: &v, Lo: -1e12, Hi: 1e12, Step: 1})
-			if v != extraFloat(sw.s, x.key) {
-				sw.s.Extra[x.key] = v
-			}
-		})
-	case "color":
-		field.Field(c, field.Props{Label: x.key}, func() {
-			st := sw.extraWellState(key)
-			colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: x.key})
-			if st.inUse {
-				rb := ui.ButtonBase(c.Key("reset-extra-"+x.key)).Padding(2, 8).Radius(t.Radius).
-					FocusRing(false).Tooltip(i18n.Tr("Use the default color"))
-				rb.Children(func() {
-					ui.Row(c).Gap(4).Children(func() {
-						ui.Image(c, lucide.RotateCcw()).Size(12, 12)
-						ui.Text(c, i18n.Tr("Reset")).FontSize(12).TextColor(t.TextMuted)
-					})
-				})
-				if rb.Clicked() {
-					delete(sw.s.Extra, x.key)
-					st.inUse = false
-				}
+			if numberinput.NumberInput(c, numberinput.Props{Value: &v, Lo: -1e12, Hi: 1e12, Step: 1}).Changed() {
+				sw.setExtra(x.key, v)
 			}
 		})
 	case "list":
@@ -191,12 +175,20 @@ func (sw *settingsWindow) renderExtra(c *ui.Context, x extraDef) {
 	default: // string
 		field.Field(c, field.Props{Label: x.key}, func() {
 			v := extraString(sw.s, x.key)
-			input.Input(c, input.Props{Value: &v})
-			if v != extraString(sw.s, x.key) {
-				sw.s.Extra[x.key] = v
+			if input.Input(c, input.Props{Value: &v}).Changed() {
+				sw.setExtra(x.key, v)
 			}
 		})
 	}
+}
+
+// setExtra stores the value of a key that has no field. The map is nil
+// until the first key is set, on a fresh install and after a reset.
+func (sw *settingsWindow) setExtra(key string, v any) {
+	if sw.s.Extra == nil {
+		sw.s.Extra = map[string]any{}
+	}
+	sw.s.Extra[key] = v
 }
 
 func extraBool(s *Settings, key string) bool {
@@ -220,20 +212,6 @@ func extraString(s *Settings, key string) string {
 	return ""
 }
 
-// extraWellState is the color well state of an unmodeled color key, so the
-// All Settings list can edit colors through Settings.Extra.
-func (sw *settingsWindow) extraWellState(key string) *colorWellState {
-	if sw.wells.state == nil {
-		sw.wells.state = map[string]*colorWellState{}
-	}
-	st, ok := sw.wells.state[key]
-	if !ok {
-		st = &colorWellState{}
-		sw.wells.state[key] = st
-	}
-	return st
-}
-
 // extraListEditor edits an unmodeled list key as one item per line, with a
 // buffer that outlives the frame.
 func (sw *settingsWindow) extraListEditor(c *ui.Context, bufKey, key string) {
@@ -249,7 +227,7 @@ func (sw *settingsWindow) extraListEditor(c *ui.Context, bufKey, key string) {
 	}
 	textarea.Textarea(c, textarea.Props{Value: b, Rows: 3})
 	if joined := strings.Join(cur, "\n"); *b != joined {
-		sw.s.Extra[key] = splitLines(*b)
+		sw.setExtra(key, splitLines(*b))
 	}
 }
 

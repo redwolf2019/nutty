@@ -5,7 +5,7 @@ package settings
 // even when this build does not act on them. Generated from otty's config.
 type extraDef struct {
 	key  string
-	kind string // bool | number | string | color | list
+	kind string // bool | number | string | list
 	def  any
 }
 
@@ -35,7 +35,6 @@ var extraSettings = []extraDef{
 	{"ctrl-shortcuts", "string", "shell"},
 	{"data-sync", "bool", false},
 	{"dedup-repaint-scrollback", "bool", true},
-	{"detect-awaiting-input", "bool", true},
 	{"dock-icon-animate-progress", "bool", false},
 	{"dock-icon-error-badge", "bool", true},
 	{"effective-background-opacity", "number", 1.0},

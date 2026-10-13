@@ -1,8 +1,9 @@
 package settings
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"nutty/internal/i18n"
 
@@ -32,6 +33,7 @@ type settingsWindow struct {
 	s              *Settings
 	win            *mygo.Window
 	last           Settings                  // the applied snapshot; a difference means a change
+	lastJSON       []byte                    // the snapshot as JSON, what sync compares
 	state          uixsettings.SettingsState // the category and search the shell shows
 	lastCat        string                    // the category of the last frame, the breath's hook
 	wells          colorWells
@@ -183,13 +185,17 @@ func (sw *settingsWindow) groupsFor(id string) []uixsettings.SettingsGroup {
 
 // pageItem is the group of a category that draws its whole page itself:
 // an unheaded group with one item that fills the row. The shell's row
-// shows an empty title and would give the page only its intrinsic width;
-// a minimum wider than any content makes the row hand it everything.
+// shows an empty title beside the page, and both ask for the row's whole
+// width. The page barely shrinks, so the empty title gives its share up
+// first and the page takes the row. A fixed minimum did that too, but it
+// was wider than the row of the window at its default size, where the
+// page's right side, the key bindings' shortcuts with it, ran off the
+// window.
 func pageItem(build func(c *ui.Context)) uixsettings.SettingsGroup {
 	return uixsettings.SettingsGroup{ID: "page", Items: []uixsettings.SettingsItem{{
 		ID: "page",
 		Build: func(c *ui.Context) {
-			ui.Column(c).FillWidth().MinWidth(560).Children(func() { build(c) })
+			ui.Column(c).FillWidth().Shrink(0.0001).Children(func() { build(c) })
 		},
 	}}}
 }
@@ -320,10 +326,12 @@ func (sw *settingsWindow) control(c *ui.Context, d settingDef) {
 		show := enumLabel(d, cur)
 		labels := make([]string, len(d.enum))
 		for i, o := range d.enum {
-			labels[i] = o.label
+			labels[i] = i18n.Tr(o.label)
 		}
-		uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels})
-		if show != enumLabel(d, cur) {
+		// show is this frame's local: Changed applies the choice to it now.
+		// Without the query the choice lands after the frame, in a variable
+		// nothing reads again.
+		if uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels}).Changed() {
 			d.set(sw.s, enumValue(d, show))
 		}
 	case "number":
@@ -356,12 +364,10 @@ func (sw *settingsWindow) renderSetting(c *ui.Context, d settingDef) {
 		field.Field(c, field.Props{Label: i18n.Tr(d.label), Hint: i18n.Tr(d.desc)}, func() {
 			labels := make([]string, len(d.enum))
 			for i, o := range d.enum {
-				labels[i] = o.label
+				labels[i] = i18n.Tr(o.label)
 			}
-			cur := d.get(sw.s).(string)
-			show := enumLabel(d, cur)
-			uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels})
-			if show != enumLabel(d, cur) {
+			show := enumLabel(d, d.get(sw.s).(string))
+			if uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels}).Changed() {
 				d.set(sw.s, enumValue(d, show))
 			}
 		})
@@ -559,15 +565,27 @@ func (sw *settingsWindow) hint(c *ui.Context, text string) {
 
 // sync applies and saves whatever differs from the last applied snapshot.
 // The selects store their "Follow system" theme choice as the empty name
-// that means following the window.
+// that means following the window. The snapshot it compares is the
+// settings' JSON: a copy of the struct shares its slices and maps with the
+// settings, so an edit made in place (a profile's field, a details view, a
+// key binding, an Extra key) never differed from the copy, and was not saved.
 func (sw *settingsWindow) sync() {
-	if !reflect.DeepEqual(*sw.s, sw.last) {
+	now, err := json.Marshal(sw.s)
+	if err != nil {
+		return
+	}
+	if sw.lastJSON == nil {
+		sw.lastJSON = now // the first frame: what the window opened with
+		return
+	}
+	if !bytes.Equal(now, sw.lastJSON) {
 		// A change of language redraws the menu with translated labels.
 		if sw.last.Language != sw.s.Language {
 			i18n.SetLang(sw.s.Language)
 			sw.app.ApplyKeybinds()
 		}
 		sw.last = *sw.s
+		sw.lastJSON = now
 		sw.app.ApplySettings()
 		sw.app.SaveSettings()
 	}
@@ -583,27 +601,42 @@ func (sw *settingsWindow) syncColors() {
 	}
 	// The theme's cursor and selection are zero in the window colors; the
 	// terminal falls back to the foreground for the cursor and an accent
-	// for the selection, so the wells show what would render.
+	// for the selection, so the wells show what would render. The text
+	// under the cursor falls back to the background the same way.
 	cursorDef := th.Cursor
 	if cursorDef.A == 0 {
 		cursorDef = th.Foreground
+	}
+	cursorTextDef := th.CursorText
+	if cursorTextDef.A == 0 {
+		cursorTextDef = th.Background
 	}
 	selDef := th.Selection
 	if selDef.A == 0 {
 		selDef = ui.Hex("#A8C7FA")
 	}
+	selTextDef := th.SelectionText
+	if selTextDef.A == 0 {
+		selTextDef = th.Foreground // selected text keeps its own colors
+	}
 	defColor := func(d settingDef) ui.Color {
 		switch d.key {
+		case "background":
+			return th.Background
 		case "cursor-color":
 			return cursorDef
+		case "cursor-text":
+			return cursorTextDef
 		case "selection-background":
 			return selDef
+		case "selection-foreground":
+			return selTextDef
 		}
 		var i int
 		if n, _ := fmt.Sscanf(d.key, "palette-%d", &i); n == 1 {
 			return th.Palette[i]
 		}
-		return th.Foreground // foreground, cursor text, selection text
+		return th.Foreground
 	}
 	sync := func(d settingDef, set func(string)) {
 		st := sw.wellState(d)
@@ -619,7 +652,11 @@ func (sw *settingsWindow) syncColors() {
 			st.base = st.color
 			return
 		}
-		if !st.inUse {
+		// An unused well follows the theme, so a change of theme refreshes
+		// it. It is refreshed only then: the picker writes its color into
+		// the well between frames, and resetting the well on every frame
+		// erased the pick before the comparison below could see it.
+		if !st.inUse && st.base != def {
 			st.base, st.color = def, def
 		}
 		if st.color != st.base {
@@ -639,36 +676,6 @@ func (sw *settingsWindow) syncColors() {
 		i := i
 		d := *defByKey(fmt.Sprintf("palette-%d", i))
 		sync(d, func(v string) { d.set(sw.s, v) })
-	}
-	// The unmodeled color keys of the All Settings list edit through the
-	// Extra map, with the same well bookkeeping.
-	for _, x := range extraSettings {
-		if x.kind != "color" {
-			continue
-		}
-		st := sw.extraWellState("extra:" + x.key)
-		hex := extraString(sw.s, x.key)
-		def := th.Foreground
-		if !sw.wells.init {
-			if hex != "" {
-				st.color = ui.Hex(hex)
-				st.inUse = true
-			} else {
-				st.color = def
-			}
-			st.base = st.color
-			continue
-		}
-		if !st.inUse {
-			st.base, st.color = def, def
-		}
-		if st.color != st.base {
-			st.inUse = true
-			st.base = st.color
-			sw.s.Extra[x.key] = ColorHex(st.color)
-		} else if st.inUse {
-			sw.s.Extra[x.key] = ColorHex(st.color)
-		}
 	}
 	sw.wells.init = true
 }

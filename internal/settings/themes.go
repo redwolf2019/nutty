@@ -43,28 +43,55 @@ func OttyTermTheme(dark bool) *terminal.Theme {
 // ThemeFor is a Ghostty theme by name, or the window's own colors when the
 // name is empty or unknown.
 func ThemeFor(name string, dark bool) *terminal.Theme {
-	if name == "" {
-		return OttyTermTheme(dark)
-	}
-	th, err := terminal.GhosttyTheme(name)
+	th, err := ghosttyTheme(name)
 	if err != nil {
 		return OttyTermTheme(dark)
 	}
 	return th
 }
 
+// ghosttyTheme is the Ghostty theme of an otty theme name. The name itself
+// goes first, so a theme file of the user's under otty's name wins; the
+// themes Ghostty ships under another name are found by that one.
+func ghosttyTheme(name string) (*terminal.Theme, error) {
+	th, err := terminal.GhosttyTheme(name)
+	if alias, ok := ghosttyNames[name]; ok && err != nil {
+		return terminal.GhosttyTheme(alias)
+	}
+	return th, err
+}
+
+// ghosttyNames are the otty themes Ghostty ships under another name. The
+// settings keep otty's name, the one the selects show and older files hold.
+var ghosttyNames = map[string]string{
+	"Ayu Dark":        "Ayu",
+	"One Dark":        "Atom One Dark",
+	"One Light":       "Atom One Light",
+	"Rosé Pine":       "Rose Pine",
+	"Solarized Dark":  "iTerm2 Solarized Dark",
+	"Solarized Light": "iTerm2 Solarized Light",
+	"Tokyo Night":     "TokyoNight",
+}
+
 // ThemeNames lists the themes the settings select from: otty's own list,
-// which Ghostty's themes cover, with follow-system first.
+// as far as Ghostty's themes cover it, with follow-system first.
 func ThemeNames() []string {
 	names := []string{"Follow system"}
 	return append(names, OttyThemeNames...)
 }
 
-// OttyThemeNames are the themes otty ships, read from its bundle.
+// OttyThemeNames are the themes of otty's bundle this build can draw: the
+// ones Ghostty ships too, by otty's name. Paper, otty's default, has no
+// Ghostty theme, and the window's own colors, measured from otty under
+// Paper, stand for it. otty's other themes of its own (Acrylic Dark,
+// April, April Dark, Floating Card, Glass Dark, Glass Light, Newsprint,
+// Night, Pink) are left out: picking one changed nothing, as ThemeFor has
+// no colors for them. A settings file that names one still reads, and
+// draws the window's colors as it did.
 var OttyThemeNames = []string{
-	"Acrylic Dark", "Glass Light", "Owl", "April", "Gruvbox Dark", "Paper",
-	"April Dark", "Monokai Classic", "Pink", "Ayu Dark", "Newsprint", "Rosé Pine",
-	"Ayu Light", "Night", "Seafoam Pastel", "Catppuccin Mocha", "Nord",
-	"Solarized Dark", "Dracula", "One Dark", "Solarized Light", "Floating Card",
-	"One Light", "Tokyo Night", "Glass Dark",
+	"Owl", "Gruvbox Dark", "Paper",
+	"Monokai Classic", "Ayu Dark", "Rosé Pine",
+	"Ayu Light", "Seafoam Pastel", "Catppuccin Mocha", "Nord",
+	"Solarized Dark", "Dracula", "One Dark", "Solarized Light",
+	"One Light", "Tokyo Night",
 }

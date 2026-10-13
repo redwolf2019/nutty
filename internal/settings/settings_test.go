@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"nutty/internal/i18n"
+
 	"github.com/egoist/mygo/ui"
 	uixsettings "github.com/smallnest/uix/components/settings"
 )
@@ -115,11 +117,27 @@ func TestThemeNames(t *testing.T) {
 	}
 }
 
-// TestSettingsRegistry checks the settings registry: every modeled key's
-// get and set round-trip, every page group references a key the registry
-// holds, and the enum values all have a label.
+// TestSettingsRegistry checks the settings registry: every key is one
+// setting's, every modeled key's get and set round-trip, every page group
+// references a key the registry holds, and the enum values all have a
+// label.
 func TestSettingsRegistry(t *testing.T) {
 	s := Default()
+	// A page finds its setting by key, and finds the first: a second def
+	// under the same key never draws, and its setting has no control.
+	keys := map[string]bool{}
+	for _, d := range settingsDefs {
+		if keys[d.key] {
+			t.Errorf("%s: two settings share the key", d.key)
+		}
+		keys[d.key] = true
+	}
+	for _, x := range extraSettings {
+		if keys[x.key] {
+			t.Errorf("%s: an unmodeled key repeats another key", x.key)
+		}
+		keys[x.key] = true
+	}
 	for _, d := range settingsDefs {
 		orig := d.get(s)
 		switch d.kind {
@@ -404,6 +422,35 @@ func TestSettingsLanguageToggle(t *testing.T) {
 	}
 	if en.HasText("关闭窗口") {
 		t.Error("english page still shows Chinese 关闭窗口")
+	}
+}
+
+// TestSettingsSelectChooses checks that picking an option of an enum's
+// select changes the setting, and that the options are listed in the
+// interface language, as the closed select shows its value.
+func TestSettingsSelectChooses(t *testing.T) {
+	t.Cleanup(func() { i18n.SetLang("english") })
+	for lang, pick := range map[string][2]string{
+		"english": {"Running Process", "Never"},
+		"chinese": {"有进程运行时", "从不提示"},
+	} {
+		s := Default()
+		s.Language = lang
+		sw := &settingsWindow{app: mockApp{}, s: s, last: *s,
+			state: uixsettings.SettingsState{Category: "general"}}
+		tt := ui.NewTester(sw.view, 900, 1600)
+		tt.Frame()
+		if err := tt.Click(pick[0]); err != nil {
+			t.Fatalf("%s: open the Closing Tab select: %v", lang, err)
+		}
+		tt.Frame()
+		if err := tt.Click(pick[1]); err != nil {
+			t.Fatalf("%s: the list lacks %q: %v", lang, pick[1], err)
+		}
+		tt.Frame()
+		if s.ConfirmCloseTab != "never" {
+			t.Errorf("%s: ConfirmCloseTab = %q, want never", lang, s.ConfirmCloseTab)
+		}
 	}
 }
 
