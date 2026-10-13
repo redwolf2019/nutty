@@ -23,6 +23,10 @@ func TestTrackWorkingDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The terminal reads its output on a goroutine of its own: wait for it
+	// to reach the end of the script, or the frame can come before the
+	// directory is known.
+	<-term.Done()
 	p := &pane{term: term}
 	s := &session{id: 1, dir: "/start", root: &node{term: p}, panes: []*pane{p}}
 	a := &app{settings: settings.Default(), sessions: []*session{s}, active: 0, activePane: p}
@@ -46,6 +50,7 @@ func TestInfoFollowsDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	<-term.Done() // the script is read before the frame, as above
 	p := &pane{term: term}
 	s := &session{id: 1, dir: "/start", root: &node{term: p}, panes: []*pane{p}}
 	a := &app{settings: settings.Default(), sessions: []*session{s}, active: 0, activePane: p}
