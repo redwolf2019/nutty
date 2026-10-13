@@ -103,7 +103,8 @@ func readmePath(dir string) string {
 	return filepath.Join(dir, "README.md")
 }
 
-// chunks splits s into pieces of at most n runes, keeping spaces whole.
+// chunks splits s into pieces of at most n runes. A piece may end in the
+// middle of a word, but never in the middle of a rune.
 func chunks(s string, n int) []string {
 	var out []string
 	runes := []rune(s)
