@@ -32,7 +32,7 @@ The app draws its own UI with MyGo's native toolkit. It uses no webview.
 ## Run
 
 ```sh
-go run .
+go run ./cmd/nutty
 ```
 
 Go 1.27 downloads itself if needed. The first run fetches
@@ -63,25 +63,30 @@ It writes `/tmp/nutty-preview.png` and `/tmp/nutty-preview-dark.png`.
 
 ## Layout
 
+The project follows the standard Go layout: the `cmd/` entry point, the
+application in `internal/app/`, and the `settings/` and `i18n/` packages
+it uses under `internal/`.
+
 | File | What it does |
 | --- | --- |
-| `app.go` | Window state and actions |
-| `session.go` | Sessions, the split tree, pane focus |
-| `view.go` | The root view layout |
-| `topbar.go` | The top bar: title and icon buttons |
-| `rail.go` | The sessions rail |
-| `info.go` | The info panel: directory, process, ports |
-| `tabbar.go` | The rename dialog |
-| `palette.go` | The commands of the palette |
-| `themes.go` | The curated Ghostty themes |
-| `menus.go` | The application menu |
-| `chat.go` | The agent chat panel |
-| `agent.go` | The `Agent` interface and the demo agent |
-| `nut.go` | The app's nut icon (`assets/nutty.svg`) |
+| `cmd/nutty/main.go` | The entry point |
+| `internal/app/app.go` | Window state and actions |
+| `internal/app/session.go` | Sessions, the split tree, pane focus |
+| `internal/app/view.go` | The root view layout |
+| `internal/app/topbar.go` | The top bar: title and icon buttons |
+| `internal/app/rail.go` | The sessions rail |
+| `internal/app/info.go` | The info panel: directory, process, ports |
+| `internal/app/tabbar.go` | The rename dialog |
+| `internal/app/palette.go` | The commands of the palette |
+| `internal/app/themes.go` | The curated Ghostty themes |
+| `internal/app/menus.go` | The application menu |
+| `internal/app/chat.go` | The agent chat panel |
+| `internal/app/agent.go` | The `Agent` interface and the demo agent |
+| `internal/app/nut.go` | The app's nut icon (`internal/app/assets/nutty.svg`) |
 
 ## Agent backend
 
-`agent.go` declares `Agent`, the interface the chat panel streams from.
+`internal/app/agent.go` declares `Agent`, the interface the chat panel streams from.
 `demoAgent` answers with a small markdown page so the UI (streaming caret,
 thinking indicator, markdown rendering) works end to end. To use a real
 model, replace `demoAgent` with an implementation that calls the model and

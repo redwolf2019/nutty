@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	src, err := os.ReadFile("assets/nutty.svg")
+	src, err := os.ReadFile("internal/app/assets/nutty.svg")
 	if err != nil {
 		log.Fatal(err)
 	}
