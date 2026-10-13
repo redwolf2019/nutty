@@ -166,16 +166,27 @@ func (a *app) refreshTitle() {
 
 func (a *app) newTab() { a.newSession("") }
 
-func (a *app) closeTab() {
-	if len(a.sessions) == 0 {
+func (a *app) closeTab() { a.requestClose(a.currentSession()) }
+
+// requestClose closes the tab s, asking first when the settings say to:
+// the menu's and the palette's Close Tab and a tab's close button all come
+// through here, so none of them skips the question. A request made while
+// the dialog is up answers it, closing the tab the dialog names rather
+// than s: the active tab may have changed under the dialog, and the tab
+// that closes must be the one the user was asked about.
+func (a *app) requestClose(s *session) {
+	if p := a.pendingClose; p != nil {
+		a.pendingClose = nil
+		a.closeSession(p)
 		return
 	}
-	s := a.sessions[a.active]
-	if a.confirmClosingTab() && a.pendingClose == nil {
+	if s == nil {
+		return
+	}
+	if a.confirmClosingTab() {
 		a.pendingClose = s
 		return
 	}
-	a.pendingClose = nil
 	a.closeSession(s)
 }
 
@@ -200,6 +211,14 @@ func (a *app) closeSession(s *session) {
 		}
 	}
 	a.sessions = append(a.sessions[:idx], a.sessions[idx+1:]...)
+	// A dialog about the tab that just closed, as when its shell exits
+	// under it, has nothing left to ask about or to rename.
+	if a.pendingClose == s {
+		a.pendingClose = nil
+	}
+	if a.rename.target == s {
+		a.rename.target, a.rename.open = nil, false
+	}
 	if len(a.sessions) == 0 {
 		a.active = 0
 		a.activePane = nil

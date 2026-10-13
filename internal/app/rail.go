@@ -46,7 +46,7 @@ func (a *app) railView(c *ui.Context) {
 		if closeID != 0 {
 			for _, s := range a.sessions {
 				if s.id == closeID {
-					a.closeSession(s)
+					a.requestClose(s)
 					break
 				}
 			}
