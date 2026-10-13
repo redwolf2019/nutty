@@ -148,7 +148,7 @@ func TestPaletteItems(t *testing.T) {
 		"New Tab",
 		"Split Right",
 		"Toggle Agent Chat",
-		"Switch to " + s.displayTitle(),
+		"Switch to " + tabLabel(s),
 		"Theme: Tokyo Night",
 		"Theme: Follow system",
 	} {
@@ -276,5 +276,27 @@ func TestDoubleClickRenames(t *testing.T) {
 		if a.rename.target != second {
 			t.Fatalf("%s: rename target = %v, want the second tab", layout, a.rename.target)
 		}
+	}
+}
+
+// TestRenameCancel checks that the rename dialog's Cancel button closes
+// it and leaves the tab's name alone.
+func TestRenameCancel(t *testing.T) {
+	a := testApp()
+	s := a.newSession("/tmp/nutty-cancel")
+	tt := ui.NewTester(a.view, 1000, 700)
+	tt.Frame()
+	a.beginRename()
+	tt.Frame()
+	tt.Type("draft")
+	if err := tt.Click("Cancel"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if a.rename.open {
+		t.Fatal("Cancel left the rename dialog open")
+	}
+	if s.name != "" {
+		t.Fatalf("Cancel renamed the tab to %q", s.name)
 	}
 }

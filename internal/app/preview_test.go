@@ -77,7 +77,6 @@ func TestSnapshot(t *testing.T) {
 	a.sessions = []*session{s}
 	a.active = 0
 	a.activePane = p
-	a.sel = sessionID(1)
 	a.panel = panelChat
 	a.info = infoState{ports: []string{"5173", "8000"}, portsDone: true}
 	a.chat.msgs = []chatMsg{
@@ -142,7 +141,6 @@ func TestStripToggles(t *testing.T) {
 		a.sessions = []*session{s}
 		a.active = 0
 		a.activePane = p
-		a.sel = sessionID(1)
 		tt := ui.NewTester(a.view, 1280, 780)
 		tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})
 		// The controls reveal on hover: over the rail the new-tab button
@@ -218,7 +216,6 @@ func TestInfoTabs(t *testing.T) {
 		a.sessions = []*session{s}
 		a.active = 0
 		a.activePane = p
-		a.sel = sessionID(1)
 		a.panel = panelInfo
 		return a
 	}
@@ -345,7 +342,6 @@ func TestFilesPanel(t *testing.T) {
 	a.sessions = []*session{s}
 	a.active = 0
 	a.activePane = p
-	a.sel = sessionID(1)
 	nodes := 0
 	a.info = infoState{
 		tab:       infoTabFiles,

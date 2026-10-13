@@ -49,7 +49,7 @@ func (a *app) railView(c *ui.Context) {
 		if closeID != 0 {
 			for _, s := range a.sessions {
 				if s.id == closeID {
-					a.closeSession(s)
+					a.requestClose(s)
 					break
 				}
 			}
@@ -124,7 +124,9 @@ func selectedCard(t *ui.Theme) ui.Color {
 // rail and the info panel show it.
 func homeShown(dir string) string {
 	home := homeDir()
-	if strings.HasPrefix(dir, home) {
+	// The home directory itself or a path below it, not a sibling whose
+	// name starts the same way.
+	if dir == home || strings.HasPrefix(dir, home+"/") {
 		return "~" + strings.TrimPrefix(dir, home)
 	}
 	return dir
