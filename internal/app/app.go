@@ -325,14 +325,22 @@ func (a *app) revealInFinder() {
 	}
 }
 
+// The font sizes the Settings page allows (its font-size setting). The
+// zoom keeps to the same range: a narrower one made Increase Font Size
+// shrink a size the page had set above it.
+const (
+	minFontSize = 6
+	maxFontSize = 40
+)
+
 func (a *app) zoomFont(delta float32) {
-	a.settings.FontSize = min(max(a.settings.FontSize+float64(delta), 8), 26)
+	a.settings.FontSize = min(max(a.settings.FontSize+float64(delta), minFontSize), maxFontSize)
 	a.ApplySettings()
 	a.SaveSettings()
 }
 
 func (a *app) resetFont() {
-	a.settings.FontSize = 13
+	a.settings.FontSize = settings.Default().FontSize
 	a.ApplySettings()
 	a.SaveSettings()
 }

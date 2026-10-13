@@ -503,6 +503,13 @@ func (s *Settings) EnvList() []string {
 	if s == nil {
 		return nil
 	}
+	// The Shell page's Term is the TERM new sessions advertise. "auto", and
+	// the empty value of older files, leave it to the terminal. It goes
+	// first: the terminal takes the list in order, so a TERM among the
+	// variables still has the last word.
+	if term := strings.TrimSpace(s.Term); term != "" && term != "auto" {
+		return append([]string{"TERM=" + term}, ValidEnv(s.Env)...)
+	}
 	return ValidEnv(s.Env)
 }
 

@@ -63,7 +63,9 @@ func (a *app) termFont() terminal.Font {
 	if s.FontThicken {
 		f.Thicken = true
 	}
-	if s.AdjustCellHeight > 0 {
+	// The adjustment goes both ways: a negative one makes the rows
+	// shorter, as the setting says.
+	if s.AdjustCellHeight != 0 {
 		f.LineHeight = 1 + float32(s.AdjustCellHeight)
 	}
 	return f
