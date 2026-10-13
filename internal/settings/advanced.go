@@ -10,8 +10,6 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
-	"github.com/oneo-me/onevra/source/icons/lucide"
-	"github.com/smallnest/uix/components/colorwell"
 	"github.com/smallnest/uix/components/field"
 	"github.com/smallnest/uix/components/input"
 	"github.com/smallnest/uix/components/numberinput"
@@ -141,7 +139,6 @@ func (sw *settingsWindow) allSettingsList(c *ui.Context) {
 // renderExtra draws one unmodeled key's inline editor, reading and
 // writing it through Settings.Extra.
 func (sw *settingsWindow) renderExtra(c *ui.Context, x extraDef) {
-	t := c.Theme()
 	key := "extra:" + x.key
 	switch x.kind {
 	case "bool":
@@ -156,25 +153,6 @@ func (sw *settingsWindow) renderExtra(c *ui.Context, x extraDef) {
 			numberinput.NumberInput(c, numberinput.Props{Value: &v, Lo: -1e12, Hi: 1e12, Step: 1})
 			if v != extraFloat(sw.s, x.key) {
 				sw.s.Extra[x.key] = v
-			}
-		})
-	case "color":
-		field.Field(c, field.Props{Label: x.key}, func() {
-			st := sw.extraWellState(key)
-			colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: x.key})
-			if st.inUse {
-				rb := ui.ButtonBase(c.Key("reset-extra-"+x.key)).Padding(2, 8).Radius(t.Radius).
-					FocusRing(false).Tooltip(i18n.Tr("Use the default color"))
-				rb.Children(func() {
-					ui.Row(c).Gap(4).Children(func() {
-						ui.Image(c, lucide.RotateCcw()).Size(12, 12)
-						ui.Text(c, i18n.Tr("Reset")).FontSize(12).TextColor(t.TextMuted)
-					})
-				})
-				if rb.Clicked() {
-					delete(sw.s.Extra, x.key)
-					st.inUse = false
-				}
 			}
 		})
 	case "list":
@@ -211,20 +189,6 @@ func extraString(s *Settings, key string) string {
 		return v
 	}
 	return ""
-}
-
-// extraWellState is the color well state of an unmodeled color key, so the
-// All Settings list can edit colors through Settings.Extra.
-func (sw *settingsWindow) extraWellState(key string) *colorWellState {
-	if sw.wells.state == nil {
-		sw.wells.state = map[string]*colorWellState{}
-	}
-	st, ok := sw.wells.state[key]
-	if !ok {
-		st = &colorWellState{}
-		sw.wells.state[key] = st
-	}
-	return st
 }
 
 // extraListEditor edits an unmodeled list key as one item per line, with a
