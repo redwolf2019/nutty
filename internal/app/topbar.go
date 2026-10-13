@@ -204,23 +204,26 @@ func (a *app) infoToolbarRow(c *ui.Context) {
 	// panel's column, so it keeps the focus in the terminal itself: its
 	// buttons would take it otherwise, as the strip's would (see topstrip).
 	ui.Row(c).KeepFocus().FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
-		a.infoTabButton(c, "toolbar-info", lucide.Info(), tr("Info"), infoTabInfo, func() {
-			if a.info.tab == infoTabInfo {
-				a.toggleInfo()
-			} else {
-				a.setInfoTab(infoTabInfo)
+		// The sections come in the order of the View page's Details Panel
+		// list, and the ones it switches off do not draw their button, as
+		// otty drops them.
+		for _, tab := range a.detailsTabs() {
+			switch tab {
+			case infoTabInfo:
+				a.infoTabButton(c, "toolbar-info", lucide.Info(), tr("Info"), infoTabInfo, func() {
+					if a.info.tab == infoTabInfo {
+						a.toggleInfo()
+					} else {
+						a.setInfoTab(infoTabInfo)
+					}
+				})
+			case infoTabOutline:
+				a.infoTabButton(c, "toolbar-outline", lucide.List(), tr("Outline"), infoTabOutline, nil)
+			case infoTabGit:
+				a.infoTabButton(c, "toolbar-git", lucide.GitBranch(), tr("Git"), infoTabGit, nil)
+			case infoTabFiles:
+				a.infoTabButton(c, "toolbar-files", lucide.Folder(), tr("Files"), infoTabFiles, nil)
 			}
-		})
-		// The sections the View page's Details Panel settings hide
-		// do not draw their button, as otty drops them.
-		if a.detailsViewEnabled("outline") {
-			a.infoTabButton(c, "toolbar-outline", lucide.List(), tr("Outline"), infoTabOutline, nil)
-		}
-		if a.detailsViewEnabled("git") {
-			a.infoTabButton(c, "toolbar-git", lucide.GitBranch(), tr("Git"), infoTabGit, nil)
-		}
-		if a.detailsViewEnabled("files") {
-			a.infoTabButton(c, "toolbar-files", lucide.Folder(), tr("Files"), infoTabFiles, nil)
 		}
 		ui.Box(c).Grow(1)
 		a.iconButton(c, "toolbar-panel", lucide.PanelRightClose(), tr("Toggle panel"), func() {
