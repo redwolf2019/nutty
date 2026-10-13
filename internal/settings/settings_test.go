@@ -142,8 +142,17 @@ func TestSettingsRegistry(t *testing.T) {
 		orig := d.get(s)
 		switch d.kind {
 		case "enum":
-			if enumLabel(d, orig.(string)) == "" {
-				t.Errorf("%s: value %q has no label", d.key, orig)
+			// enumLabel hands back a value it has no label for, so asking
+			// it for an empty label never failed: look the default up.
+			offered := false
+			for _, o := range d.enum {
+				offered = offered || o.value == orig
+				if o.label == "" {
+					t.Errorf("%s: option %q has no label", d.key, o.value)
+				}
+			}
+			if !offered {
+				t.Errorf("%s: the default %q is not one of its options", d.key, orig)
 			}
 			for _, o := range d.enum {
 				if enumValue(d, o.label) != o.value {
@@ -334,8 +343,9 @@ func TestShellArgs(t *testing.T) {
 	}
 }
 
-// TestProfile checks that the default profile is found by name and that
-// newTerm's profile overrides apply.
+// TestProfile checks that the default profile is found by name, and that
+// a default naming no profile is ignored. What a profile overrides in a
+// new pane is the app package's to test, where newTerm is.
 func TestProfile(t *testing.T) {
 	s := Default()
 	if s.Profile() != nil {

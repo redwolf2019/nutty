@@ -540,17 +540,21 @@ func (s *Settings) Profile() *Profile {
 }
 
 // ShellArgs splits a command line into arguments, honoring single and
-// double quotes, so "sh -c 'echo hi'" keeps its two words together.
+// double quotes, so "sh -c 'echo hi'" keeps its two words together. It
+// goes byte by byte: the quotes and blanks it looks for are single bytes
+// that no longer character holds, and every other byte is copied as it
+// is, where going rune by rune rewrote a byte that is no UTF-8 as U+FFFD.
 func ShellArgs(s string) []string {
 	var out []string
 	var cur strings.Builder
-	var quote rune
-	for _, r := range s {
+	var quote byte
+	for i := 0; i < len(s); i++ {
+		r := s[i]
 		switch {
 		case quote == '\'' && r == '\'' || quote == '"' && r == '"':
 			quote = 0
 		case quote != 0:
-			cur.WriteRune(r)
+			cur.WriteByte(r)
 		case r == '\'' || r == '"':
 			quote = r
 		case r == ' ' || r == '\t':
@@ -559,7 +563,7 @@ func ShellArgs(s string) []string {
 				cur.Reset()
 			}
 		default:
-			cur.WriteRune(r)
+			cur.WriteByte(r)
 		}
 	}
 	if cur.Len() > 0 {

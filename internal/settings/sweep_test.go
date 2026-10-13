@@ -16,6 +16,8 @@ import (
 // and 中文.
 func TestSweepTranslations(t *testing.T) {
 	i18n.SetLang("chinese")
+	// The language is the process's: put English back for the other tests.
+	t.Cleanup(func() { i18n.SetLang("english") })
 	i18n.SetRecording(true)
 	defer i18n.SetRecording(false)
 	s := Default()
