@@ -59,6 +59,7 @@ type node struct {
 type splitNode struct {
 	vertical bool
 	size     *float32
+	room     float32 // what the two panes shared in the last frame
 	a, b     *node
 }
 
@@ -68,6 +69,7 @@ type pane struct {
 	err    error // why there is no terminal, for the pane to say
 	handle ui.Handle
 	dead   bool
+	w, h   float32 // the pane's size in the last frame, for a split to halve
 }
 
 // newTerminal is terminal.New, a seam for tests that must not start a
@@ -157,10 +159,7 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 		},
 		OnExit: func(code int) {
 			a.win.Update(func() {
-				p.dead = true
-				if sessionAllDead(s) {
-					a.closeSession(s)
-				}
+				a.paneExited(p)
 			})
 		},
 		OpenLink: a.openLink,
@@ -180,22 +179,46 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 func (a *app) renderNode(c *ui.Context, n *node) {
 	if n.split != nil {
 		sn := n.split
-		split.Split(c, split.Props{
+		// The divider keeps its place in DIPs and the split clamps it only
+		// while it is dragged, so a window made narrower, or a panel opened
+		// beside the panes, would push the second pane out of its room:
+		// keep the divider inside the room the split had.
+		if sn.room > 0 {
+			*sn.size = max(splitMinPane, min(*sn.size, sn.room-1-splitMinPane))
+		}
+		r := split.Split(c, split.Props{
 			Size:     sn.size,
 			Vertical: sn.vertical,
 			First:    func(c *ui.Context) { a.renderNode(c, sn.a) },
 			Second:   func(c *ui.Context) { a.renderNode(c, sn.b) },
-		}).Fill()
+		}).Fill().Bounds()
+		sn.room = r.W
+		if sn.vertical {
+			sn.room = r.H
+		}
 		return
 	}
 	a.renderPane(c, n.term)
+	// Remember the pane's size, which a split of it halves (see splitPane).
+	if r := c.Resolve(n.term.handle).Bounds(); r.W > 0 && r.H > 0 {
+		n.term.w, n.term.h = r.W, r.H
+	}
 }
+
+// splitMinPane is the least a split leaves either pane, as the divider of
+// the Split widget does when dragged.
+const splitMinPane = 40
 
 // renderPane draws one terminal, filling the pane with no ring around it —
 // otty draws none, and a ring around a terminal reads as a border.
 func (a *app) renderPane(c *ui.Context, p *pane) {
-	on := p.handle.Focused(c)
-	if on {
+	// The pane with the focus is the active one, unless a command just
+	// chose another (focusPane): that one takes the focus as it draws, and
+	// the pane the focus is leaving does not claim activePane meanwhile.
+	chosen := a.focusActive && p == a.activePane
+	if chosen {
+		a.focusActive = false
+	} else if !a.focusActive && p.handle.Focused(c) {
 		a.activePane = p
 	}
 	ui.Box(c).Fill().Clip().Children(func() {
@@ -214,7 +237,9 @@ func (a *app) renderPane(c *ui.Context, p *pane) {
 			return
 		}
 		tv := terminal.View(c, p.term)
-		if p == a.activePane && a.panel == panelNone && !a.paletteOpen {
+		if chosen {
+			tv.Focus()
+		} else if p == a.activePane && a.panel == panelNone && !a.paletteOpen {
 			tv.AutoFocus()
 		}
 		tv.Fill().Bind(&p.handle)
@@ -235,7 +260,15 @@ func (a *app) splitPane(p *pane, vertical bool) {
 	}
 	np := &pane{}
 	np.term = a.newTerm(s, np)
+	// Half of the pane being split, not of the window: the window's half is
+	// wider than a pane that is already one side of a split, which left the
+	// new pane no room at all.
 	size := a.defaultSplitSize(vertical)
+	if vertical && p.h > 0 {
+		size = float32(int(p.h / 2))
+	} else if !vertical && p.w > 0 {
+		size = float32(int(p.w / 2))
+	}
 	split := &node{split: &splitNode{
 		vertical: vertical,
 		size:     &size,
@@ -252,7 +285,7 @@ func (a *app) splitPane(p *pane, vertical bool) {
 		})
 	}
 	s.panes = append(s.panes, np)
-	a.activePane = np
+	a.focusPane(np)
 }
 
 // defaultSplitSize puts the divider near the middle of the window.
@@ -294,6 +327,16 @@ func (s *session) replaceChild(p *pane, fn func(*node) *node) bool {
 	return rec(s.root)
 }
 
+// paneExited closes the pane whose shell ended, as typing exit in a
+// terminal closes it: its split collapses to the sibling, and the tab
+// closes with its last pane. A pane left in the tree showed "[Process
+// exited]" for as long as the tab lived, with no command to close it, and
+// stopped the focus from cycling past it.
+func (a *app) paneExited(p *pane) {
+	p.dead = true
+	a.closePane(p)
+}
+
 // closePane closes p, collapsing its split to the sibling, or closing the
 // whole session when it is the last pane.
 func (a *app) closePane(p *pane) {
@@ -313,7 +356,9 @@ func (a *app) closePane(p *pane) {
 		_ = p.term.Close()
 	}
 	if a.activePane == p {
-		a.activePane = s.panes[0]
+		// The focus was in the pane that went: give it to the one taking
+		// its place, or nothing typed reaches a shell until a click.
+		a.focusPane(s.panes[0])
 	}
 }
 
@@ -356,19 +401,6 @@ func collectPanes(n *node) []*pane {
 		return []*pane{n.term}
 	}
 	return append(collectPanes(n.split.a), collectPanes(n.split.b)...)
-}
-
-// sessionAllDead reports whether every pane of the session has exited.
-func sessionAllDead(s *session) bool {
-	if s == nil {
-		return true
-	}
-	for _, p := range s.panes {
-		if !p.dead {
-			return false
-		}
-	}
-	return true
 }
 
 // openLink opens a file path the terminal printed, reporting whether it

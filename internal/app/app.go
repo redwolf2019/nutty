@@ -30,6 +30,10 @@ type app struct {
 	sessions   []*session
 	active     int
 	activePane *pane
+	// focusActive asks the next frame to give activePane the keyboard
+	// focus: a command chose the pane (focusPane), and the pane that had
+	// the focus until then must not take activePane back as it draws.
+	focusActive bool
 
 	sideOpen bool
 	panel    panelMode
@@ -304,7 +308,7 @@ func (a *app) focusPane(p *pane) {
 		return
 	}
 	a.activePane = p
-	p.handle.Focus()
+	a.focusActive = true
 }
 
 func (a *app) clearScreen() {
