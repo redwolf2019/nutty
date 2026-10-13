@@ -11,7 +11,11 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// SaveSettings writes the preferences to the settings file.
+// SaveSettings writes the preferences to the settings file. It writes a
+// file beside it and renames that over it, so the settings file is whole
+// at every moment: writing it in place empties it first, and a crash or a
+// full disk then leaves a file that does not parse, which reads as the
+// defaults at the next launch.
 func (a *app) SaveSettings() {
 	if a == nil || a.settings == nil {
 		return
@@ -20,8 +24,30 @@ func (a *app) SaveSettings() {
 	if err != nil {
 		return
 	}
-	_ = os.MkdirAll(filepath.Dir(settings.Path()), 0o755)
-	_ = os.WriteFile(settings.Path(), b, 0o644)
+	path := settings.Path()
+	_ = os.MkdirAll(filepath.Dir(path), 0o755)
+	// A settings file that is a link, as into a dotfiles folder, stays
+	// one: the rename replaces the file it points to.
+	if target, err := filepath.EvalSymlinks(path); err == nil {
+		path = target
+	}
+	f, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp")
+	if err != nil {
+		return
+	}
+	_, err = f.Write(b)
+	if err == nil {
+		err = f.Chmod(0o644) // a temporary file is 0600; the settings file is not
+	}
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(f.Name(), path)
+	}
+	if err != nil {
+		_ = os.Remove(f.Name())
+	}
 }
 
 // sidebarWidth is the width of the tabs rail, from the settings.
@@ -60,11 +86,29 @@ func (a *app) scrollbackBytes() int {
 	return n * 100
 }
 
-// ApplySettings puts the settings into effect: the terminals' theme and
-// font, the window's opacity and size, and a redraw. The creation-time
-// options (cursor, scrollback, Option-as-Alt) reach new sessions, in
-// newTerm.
+// ApplySettings puts the settings into effect in every window: they are
+// one set (see sharedSettings), so a change made from one window, or from
+// its Settings window, shows in the others as well.
 func (a *app) ApplySettings() {
+	a.applySettings()
+	appsMu.Lock()
+	var others []*app
+	for _, o := range apps {
+		if o != a && o.settings == a.settings {
+			others = append(others, o)
+		}
+	}
+	appsMu.Unlock()
+	for _, o := range others {
+		o.applySettings()
+	}
+}
+
+// applySettings puts the settings into effect in this window: the
+// terminals' theme and font, the window's opacity and size, and a redraw.
+// The creation-time options (cursor, scrollback, Option-as-Alt) reach new
+// sessions, in newTerm.
+func (a *app) applySettings() {
 	if a.settings == nil {
 		return
 	}
