@@ -182,6 +182,56 @@ func TestKeybindRows(t *testing.T) {
 	}
 }
 
+// TestKeybindRowsOrder checks that the list is the same on every frame,
+// with each group's rows together and no action listed twice.
+func TestKeybindRowsOrder(t *testing.T) {
+	sw := &settingsWindow{s: Default()}
+	rows := sw.keybindRows()
+	for i := 0; i < 5; i++ {
+		if !reflect.DeepEqual(rows, sw.keybindRows()) {
+			t.Fatal("keybindRows changes order between calls")
+		}
+	}
+	labels := map[string]bool{}
+	closed := map[string]bool{}
+	group := ""
+	for _, r := range rows {
+		if labels[r.label] {
+			t.Errorf("%q is listed twice", r.label)
+		}
+		labels[r.label] = true
+		if g := keybindGroupOf(r.action); g != group {
+			if closed[g] {
+				t.Errorf("group %q is split by another group", g)
+			}
+			closed[group], group = true, g
+		}
+	}
+}
+
+// TestKeybindCapture checks that a shortcut pressed on a fresh install
+// records as otty writes it, modifiers and key joined by "+".
+func TestKeybindCapture(t *testing.T) {
+	for _, s := range []*Settings{Default(), LoadFrom([]byte(`{"KeybindOverrides": null}`))} {
+		sw := &settingsWindow{s: s}
+		sw.keys.recording = "new_tab"
+		tt := ui.NewTester(func(c *ui.Context) {
+			if sw.keys.recording != "" {
+				sw.captureCombo(c)
+			}
+		}, 200, 100)
+		tt.Frame()
+		tt.Key(ui.Super|ui.Shift, ui.KeyK)
+		tt.Frame()
+		if got := s.KeybindOverrides["cmd+shift+k"]; got != "new_tab" {
+			t.Fatalf("overrides = %v, want cmd+shift+k bound to new_tab", s.KeybindOverrides)
+		}
+	}
+	if got := comboName(0, ui.KeyF5); got != "f5" {
+		t.Errorf("bare key = %q, want f5", got)
+	}
+}
+
 // TestKeybindRecord checks that recording a combo binds it, drops the
 // action's old binding and any other action on the combo, and that
 // conflicts are detected.

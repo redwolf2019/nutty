@@ -309,6 +309,9 @@ func Default() *Settings {
 		AgentNotifyTaskComplete:  true,
 		AgentNotifyAwaitingInput: true,
 		AgentResumeSession:       true,
+
+		KeybindOverrides: map[string]string{},
+		Extra:            map[string]any{},
 	}
 }
 
@@ -436,6 +439,14 @@ func (s *Settings) Normalize() {
 	}
 	if len(s.DetailsViews) == 0 {
 		s.DetailsViews = Default().DetailsViews
+	}
+	// A saved file holds null for a map nothing was put in; the pages write
+	// into both maps.
+	if s.KeybindOverrides == nil {
+		s.KeybindOverrides = map[string]string{}
+	}
+	if s.Extra == nil {
+		s.Extra = map[string]any{}
 	}
 }
 
