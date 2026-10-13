@@ -35,7 +35,7 @@ func (sw *settingsWindow) pageProfiles(c *ui.Context) {
 				})
 			})
 			if ab.Clicked() {
-				sw.s.Profiles = append(sw.s.Profiles, Profile{Name: fmt.Sprintf("Profile %d", len(sw.s.Profiles)+1)})
+				sw.s.Profiles = append(sw.s.Profiles, Profile{Name: sw.newProfileName()})
 				sw.profileSel = len(sw.s.Profiles) - 1
 			}
 			for i := range sw.s.Profiles {
@@ -68,7 +68,7 @@ func (sw *settingsWindow) pageProfiles(c *ui.Context) {
 			}
 			p := &sw.s.Profiles[sw.profileSel]
 			sw.profileField(c, i18n.Tr("Name"), func() {
-				input.Input(c, input.Props{Value: &p.Name})
+				sw.profileNameEditor(c, p)
 			})
 			sw.profileField(c, i18n.Tr("Command"), func() {
 				input.Input(c, input.Props{Value: &p.Command, Placeholder: i18n.Tr("The shell new panes run")})
@@ -102,16 +102,24 @@ func (sw *settingsWindow) pageProfiles(c *ui.Context) {
 					sw.advButton(c, "profile-dup", i18n.Tr("Duplicate"), func() {
 						dup := *p
 						dup.Name = dup.Name + i18n.Tr(" copy")
+						for sw.profileNamed(dup.Name) {
+							dup.Name += i18n.Tr(" copy") // a copy of a copy
+						}
 						sw.s.Profiles = append(sw.s.Profiles, dup)
 						sw.profileSel = len(sw.s.Profiles) - 1
 					})
 				}
 				sw.advButton(c, "profile-del", i18n.Tr("Delete"), func() {
-					if sw.s.DefaultProfile == p.Name {
+					if sw.s.Profile() == p {
 						sw.s.DefaultProfile = ""
 					}
 					sw.s.Profiles = append(sw.s.Profiles[:sw.profileSel], sw.s.Profiles[sw.profileSel+1:]...)
 					sw.profileSel = -1
+					// The editors' buffers are kept by a profile's index, and
+					// the profiles after this one each moved down by one: drop
+					// the buffers, or the next profile shown takes this one's
+					// environment.
+					sw.lists = nil
 				})
 			})
 		})
@@ -175,5 +183,55 @@ func (sw *settingsWindow) profileEnvEditor(c *ui.Context, p *Profile) {
 	textarea.Textarea(c, textarea.Props{Value: b, Rows: 3})
 	if *b != cur {
 		p.Env = splitLines(*b)
+	}
+}
+
+// profileNameEditor edits a profile's name through a buffer of its own,
+// kept with the list editors' so it is dropped when they are. The default
+// profile is stored by its name, so a name has to stay one profile's: what
+// is typed renames the profile only while it is not empty and no other
+// profile has it, and the default follows its profile to the new name.
+// Out of focus the field shows the name the profile has.
+func (sw *settingsWindow) profileNameEditor(c *ui.Context, p *Profile) {
+	key := fmt.Sprintf("profile-name-%d", sw.profileSel)
+	if sw.lists == nil {
+		sw.lists = map[string]*string{}
+	}
+	b, ok := sw.lists[key]
+	if !ok {
+		name := p.Name
+		b = &name
+		sw.lists[key] = b
+	}
+	in := input.Input(c, input.Props{Value: b})
+	if in.Changed() {
+		if *b != "" && !sw.profileNamed(*b) {
+			if sw.s.Profile() == p {
+				sw.s.DefaultProfile = *b
+			}
+			p.Name = *b
+		}
+	} else if !in.Focused() {
+		*b = p.Name
+	}
+}
+
+// profileNamed reports whether a profile has the name.
+func (sw *settingsWindow) profileNamed(name string) bool {
+	for i := range sw.s.Profiles {
+		if sw.s.Profiles[i].Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// newProfileName is the next "Profile N" no profile has: counting the
+// profiles alone gives a name twice once a profile was deleted.
+func (sw *settingsWindow) newProfileName() string {
+	for n := len(sw.s.Profiles) + 1; ; n++ {
+		if name := fmt.Sprintf("Profile %d", n); !sw.profileNamed(name) {
+			return name
+		}
 	}
 }
