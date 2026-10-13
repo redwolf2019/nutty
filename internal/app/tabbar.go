@@ -106,7 +106,9 @@ func (a *app) renameDialog(c *ui.Context) {
 					a.commitRename()
 				}
 				ui.Row(c).FillWidth().Justify(ui.End).Gap(8).Children(func() {
-					ui.Button(c, tr("Cancel")).FocusRing(false)
+					if ui.Button(c, tr("Cancel")).FocusRing(false).Clicked() {
+						a.rename.open = false
+					}
 					if ui.PrimaryButton(c, tr("Rename")).Clicked() {
 						a.commitRename()
 					}
