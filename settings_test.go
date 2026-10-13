@@ -10,7 +10,7 @@ import (
 
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
-	"github.com/oneo-me/onevra/source/components"
+	uixsettings "github.com/smallnest/uix/components/settings"
 )
 
 // TestSettingsJSON checks that the settings survive a save and load, and
@@ -237,14 +237,14 @@ func TestKeybindRecord(t *testing.T) {
 // TestAccelerator checks that otty triggers convert to menu accelerators.
 func TestAccelerator(t *testing.T) {
 	cases := map[string]string{
-		"cmd+comma":             "CmdOrCtrl+,",
-		"cmd+shift+l":           "CmdOrCtrl+Shift+L",
-		"cmd+opt+d":             "CmdOrCtrl+Option+D",
+		"cmd+comma":               "CmdOrCtrl+,",
+		"cmd+shift+l":             "CmdOrCtrl+Shift+L",
+		"cmd+opt+d":               "CmdOrCtrl+Option+D",
 		"cmd+shift+right_bracket": "CmdOrCtrl+Shift+]",
-		"cmd+ctrl+down":         "CmdOrCtrl+Ctrl+Down",
-		"cmd+equal":             "CmdOrCtrl+=",
-		"cmd+0":                 "CmdOrCtrl+0",
-		"cmd+t":                 "CmdOrCtrl+T",
+		"cmd+ctrl+down":           "CmdOrCtrl+Ctrl+Down",
+		"cmd+equal":               "CmdOrCtrl+=",
+		"cmd+0":                   "CmdOrCtrl+0",
+		"cmd+t":                   "CmdOrCtrl+T",
 	}
 	for trigger, want := range cases {
 		if got := acceleratorOf(trigger); got != want {
@@ -256,7 +256,10 @@ func TestAccelerator(t *testing.T) {
 // TestShellArgs checks that a profile's command line splits into
 // arguments with its quotes honored.
 func TestShellArgs(t *testing.T) {
-	cases := []struct{ in string; want int }{
+	cases := []struct {
+		in   string
+		want int
+	}{
 		{"", 0},
 		{"zsh", 1},
 		{"docker compose up", 3},
@@ -297,17 +300,17 @@ func TestSettingsPagesRender(t *testing.T) {
 	a := &app{settings: defaultSettings(), sideOpen: true, agent: &demoAgent{}}
 	a.settings.Profiles = []profile{{Name: "Web", Command: "docker compose up"}}
 	want := map[string][]string{
-		"appearance":  {"Theme", "Font Family", "Cursor Style", "Palette"},
-		"general":     {"Language", "Closing Window", "On Launch"},
-		"shell":       {"Command", "Working Directory", "Environment Variables"},
-		"controls":    {"Use Option Key as Meta", "Right-Click Action", "Scrollback Lines"},
-		"editor":      {"Soft Wrap", "Vim Keys"},
-		"view":        {"Details Panel", "Outline"},
-		"recipes":     {"Saved Recipes"},
-		"agents":      {"Prevent Sleep While Processing"},
-		"data":        {"Not available in this build"},
-		"account":     {"Not signed in"},
-		"remote":      {"Not available in this build."},
+		"appearance":   {"Theme", "Font Family", "Cursor Style", "Palette"},
+		"general":      {"Language", "Closing Window", "On Launch"},
+		"shell":        {"Command", "Working Directory", "Environment Variables"},
+		"controls":     {"Use Option Key as Meta", "Right-Click Action", "Scrollback Lines"},
+		"editor":       {"Soft Wrap", "Vim Keys"},
+		"view":         {"Details Panel", "Outline"},
+		"recipes":      {"Saved Recipes"},
+		"agents":       {"Prevent Sleep While Processing"},
+		"data":         {"Not available in this build"},
+		"account":      {"Not signed in"},
+		"remote":       {"Not available in this build."},
 		"key_bindings": {"New Tab", "cmd+t", "Tab 1", "cmd+1"},
 		"advanced":     {"Config File", "All Settings", "font-family", "auto-update"},
 		"profiles":     {"New Profile", "Web", "Command", "Set as Default"},
@@ -315,7 +318,7 @@ func TestSettingsPagesRender(t *testing.T) {
 	for _, cat := range settingsCategories {
 		sw := &settingsWindow{
 			a: a, s: a.settings, last: *a.settings,
-			state: components.SettingsState{Category: cat.id},
+			state: uixsettings.SettingsState{Category: cat.id},
 		}
 		if cat.id == "profiles" {
 			sw.profileSel = 0
@@ -352,7 +355,7 @@ func TestSettingsCategoryIcons(t *testing.T) {
 func TestDataBreath(t *testing.T) {
 	a := &app{settings: defaultSettings()}
 	sw := &settingsWindow{a: a, s: a.settings, last: *a.settings,
-		state: components.SettingsState{Category: "appearance"}}
+		state: uixsettings.SettingsState{Category: "appearance"}}
 	tt := ui.NewTester(sw.view, 760, 800)
 	tt.Frame()
 	if err := tt.Click("Data"); err != nil {

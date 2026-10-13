@@ -8,15 +8,15 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
-	"github.com/oneo-me/onevra/source/components"
 	"github.com/oneo-me/onevra/source/icons/lucide"
 	"github.com/smallnest/uix/components/colorwell"
 	"github.com/smallnest/uix/components/field"
 	"github.com/smallnest/uix/components/input"
 	"github.com/smallnest/uix/components/numberinput"
 	uixselect "github.com/smallnest/uix/components/select"
-	"github.com/smallnest/uix/components/textarea"
+	uixsettings "github.com/smallnest/uix/components/settings"
 	uixswitch "github.com/smallnest/uix/components/switch"
+	"github.com/smallnest/uix/components/textarea"
 )
 
 // settingsWindow is the Settings window. It is the shell of onevra's
@@ -25,18 +25,18 @@ import (
 // and saved. It edits the app's settings in place, so the main window and
 // the settings agree.
 type settingsWindow struct {
-	a     *app
-	s     *settings
-	win   *mygo.Window
-	last  settings // the applied snapshot; a difference means a change
-	state components.SettingsState // the category and search the shell shows
-	lastCat string                 // the category of the last frame, the breath's hook
-	wells colorWells
-	lists map[string]*string // def key -> list editor buffer
-	keys  keybindPage
+	a              *app
+	s              *settings
+	win            *mygo.Window
+	last           settings                  // the applied snapshot; a difference means a change
+	state          uixsettings.SettingsState // the category and search the shell shows
+	lastCat        string                    // the category of the last frame, the breath's hook
+	wells          colorWells
+	lists          map[string]*string // def key -> list editor buffer
+	keys           keybindPage
 	settingsSearch string // the Advanced page's filter
-	profileSel int        // the profile the editor shows, or -1
-	dataBreath uint64     // clicks of the Data row, its icon's breath count
+	profileSel     int    // the profile the editor shows, or -1
+	dataBreath     uint64 // clicks of the Data row, its icon's breath count
 }
 
 // colorWells hold the buffers of the color pickers, one per color
@@ -75,18 +75,18 @@ var settingsCategories = []struct{ id, title string }{
 // newSettingsWindow opens the settings of the app: one window, reused.
 func newSettingsWindow(a *app) *mygo.Window {
 	sw := &settingsWindow{
-		a:    a,
-		s:    a.settings,
-		last: *a.settings,
-		state: components.SettingsState{Category: "appearance"},
+		a:     a,
+		s:     a.settings,
+		last:  *a.settings,
+		state: uixsettings.SettingsState{Category: "appearance"},
 	}
 	sw.win = mygo.NewWindow(mygo.WindowOptions{
-		Title:      "Settings",
-		Width:      760,
-		Height:     540,
-		MinWidth:   600,
-		MinHeight:  420,
-		Content:    ui.View(sw.view),
+		Title:     "Settings",
+		Width:     760,
+		Height:    540,
+		MinWidth:  600,
+		MinHeight: 420,
+		Content:   ui.View(sw.view),
 	})
 	sw.win.OnClosed(func() { a.settingsWin = nil })
 	return sw.win
@@ -95,7 +95,7 @@ func newSettingsWindow(a *app) *mygo.Window {
 func (sw *settingsWindow) view(c *ui.Context) {
 	c.SetTheme(ottyTheme(c.Theme().Dark))
 	sw.syncColors() // the wells show the theme's colors before the controls draw
-	components.Settings(c, &sw.state, sw.settingsCategoriesFor(), components.SettingsOptions{})
+	uixsettings.Settings(c, &sw.state, sw.settingsCategoriesFor(), uixsettings.SettingsOptions{})
 	// The shell's own row click sets the selection; a click of the Data
 	// row also breathes its database icon, one cycle per click.
 	if sw.state.Category == "data" && sw.state.Category != sw.lastCat {
@@ -110,10 +110,10 @@ func (sw *settingsWindow) view(c *ui.Context) {
 // their order, each with the groups and items of its page. It is rebuilt
 // every frame, so the items' closures see this frame's values; nothing is
 // cached.
-func (sw *settingsWindow) settingsCategoriesFor() []components.SettingsCategory {
-	cats := make([]components.SettingsCategory, 0, len(settingsCategories))
+func (sw *settingsWindow) settingsCategoriesFor() []uixsettings.SettingsCategory {
+	cats := make([]uixsettings.SettingsCategory, 0, len(settingsCategories))
 	for _, cat := range settingsCategories {
-		cats = append(cats, components.SettingsCategory{
+		cats = append(cats, uixsettings.SettingsCategory{
 			ID:      cat.id,
 			Title:   cat.title,
 			Leading: sw.categoryLeading(cat.id),
@@ -168,18 +168,18 @@ func (sw *settingsWindow) breatheData(c *ui.Context, img ui.Element) {
 // registry drives map straight to groups of items; Profiles, Key
 // Bindings and Advanced draw their whole page in one item, as do the
 // notices of the pages without a form.
-func (sw *settingsWindow) groupsFor(id string) []components.SettingsGroup {
+func (sw *settingsWindow) groupsFor(id string) []uixsettings.SettingsGroup {
 	switch id {
 	case "appearance":
 		return sw.appearanceGroups()
 	case "view":
 		return sw.viewGroups()
 	case "profiles":
-		return []components.SettingsGroup{pageItem(func(c *ui.Context) { sw.pageProfiles(c) })}
+		return []uixsettings.SettingsGroup{pageItem(func(c *ui.Context) { sw.pageProfiles(c) })}
 	case "key_bindings":
-		return []components.SettingsGroup{pageItem(func(c *ui.Context) { sw.pageKeyBindings(c) })}
+		return []uixsettings.SettingsGroup{pageItem(func(c *ui.Context) { sw.pageKeyBindings(c) })}
 	case "advanced":
-		return []components.SettingsGroup{pageItem(func(c *ui.Context) { sw.pageAdvanced(c) })}
+		return []uixsettings.SettingsGroup{pageItem(func(c *ui.Context) { sw.pageAdvanced(c) })}
 	case "data":
 		return noticeGroup("Sync & Backup", "Not available in this build")
 	case "account":
@@ -195,8 +195,8 @@ func (sw *settingsWindow) groupsFor(id string) []components.SettingsGroup {
 // an unheaded group with one item that fills the row. The shell's row
 // shows an empty title and would give the page only its intrinsic width;
 // a minimum wider than any content makes the row hand it everything.
-func pageItem(build func(c *ui.Context)) components.SettingsGroup {
-	return components.SettingsGroup{ID: "page", Items: []components.SettingsItem{{
+func pageItem(build func(c *ui.Context)) uixsettings.SettingsGroup {
+	return uixsettings.SettingsGroup{ID: "page", Items: []uixsettings.SettingsItem{{
 		ID: "page",
 		Build: func(c *ui.Context) {
 			ui.Column(c).FillWidth().MinWidth(560).Children(func() { build(c) })
@@ -206,31 +206,31 @@ func pageItem(build func(c *ui.Context)) components.SettingsGroup {
 
 // noticeGroup is a category without a form: a heading and the muted
 // notice otty shows for the absent feature.
-func noticeGroup(title, notice string) []components.SettingsGroup {
-	return []components.SettingsGroup{{
+func noticeGroup(title, notice string) []uixsettings.SettingsGroup {
+	return []uixsettings.SettingsGroup{{
 		ID: title, Title: title,
-		Items: []components.SettingsItem{{ID: "notice", Description: notice}},
+		Items: []uixsettings.SettingsItem{{ID: "notice", Description: notice}},
 	}}
 }
 
 // registryGroups is the shell's groups of one page: each otty section of
 // the registry becomes a group, each setting an item whose row shows its
 // label and description and whose control edits the value.
-func (sw *settingsWindow) registryGroups(id string) []components.SettingsGroup {
-	groups := make([]components.SettingsGroup, 0, len(settingsGroups[id]))
+func (sw *settingsWindow) registryGroups(id string) []uixsettings.SettingsGroup {
+	groups := make([]uixsettings.SettingsGroup, 0, len(settingsGroups[id]))
 	for _, g := range settingsGroups[id] {
-		items := make([]components.SettingsItem, 0, len(g.keys))
+		items := make([]uixsettings.SettingsItem, 0, len(g.keys))
 		for _, key := range g.keys {
 			if d := defByKey(key); d != nil {
 				d := *d
-				items = append(items, components.SettingsItem{
+				items = append(items, uixsettings.SettingsItem{
 					ID: d.key, Title: d.label, Description: d.desc,
 					Keywords: []string{d.key},
 					Build:    func(c *ui.Context) { sw.control(c, d) },
 				})
 			}
 		}
-		groups = append(groups, components.SettingsGroup{ID: g.title, Title: g.title, Items: items})
+		groups = append(groups, uixsettings.SettingsGroup{ID: g.title, Title: g.title, Items: items})
 	}
 	return groups
 }
@@ -238,11 +238,11 @@ func (sw *settingsWindow) registryGroups(id string) []components.SettingsGroup {
 // appearanceGroups is the Appearance page: the registry's groups, with
 // the sixteen palette colors as a grid inside the Colors section, as
 // otty draws them.
-func (sw *settingsWindow) appearanceGroups() []components.SettingsGroup {
+func (sw *settingsWindow) appearanceGroups() []uixsettings.SettingsGroup {
 	groups := sw.registryGroups("appearance")
 	for i := range groups {
 		if groups[i].ID == "Colors" {
-			groups[i].Items = append(groups[i].Items, components.SettingsItem{
+			groups[i].Items = append(groups[i].Items, uixsettings.SettingsItem{
 				ID: "palette", Title: "Palette",
 				Description: "The sixteen ANSI colors of the terminal palette.",
 				Keywords:    []string{"palette", "ansi", "color"},
@@ -255,12 +255,12 @@ func (sw *settingsWindow) appearanceGroups() []components.SettingsGroup {
 
 // viewGroups is the View page: the registry's groups, and the Details
 // Panel's tabs, each with its enable switch and the arrows to reorder it.
-func (sw *settingsWindow) viewGroups() []components.SettingsGroup {
+func (sw *settingsWindow) viewGroups() []uixsettings.SettingsGroup {
 	groups := sw.registryGroups("view")
-	details := components.SettingsGroup{ID: "Details Panel", Title: "Details Panel"}
+	details := uixsettings.SettingsGroup{ID: "Details Panel", Title: "Details Panel"}
 	for _, v := range sw.s.DetailsViews {
 		id, title := v.ID, v.Title
-		details.Items = append(details.Items, components.SettingsItem{
+		details.Items = append(details.Items, uixsettings.SettingsItem{
 			ID: id, Title: title,
 			Description: "A tab of the details panel on the right; the arrows reorder it.",
 			Keywords:    []string{"details", "panel"},
@@ -464,7 +464,7 @@ func (sw *settingsWindow) colorControls(c *ui.Context, d settingDef) {
 	ui.Row(c).Gap(12).Children(func() {
 		colorwell.ColorWell(c, colorwell.Props{Color: &st.color, Label: d.label})
 		if st.inUse {
-			rb := ui.ButtonBase(c.Key("reset-" + d.key)).Padding(2, 8).Radius(t.Radius).
+			rb := ui.ButtonBase(c.Key("reset-"+d.key)).Padding(2, 8).Radius(t.Radius).
 				FocusRing(false).Tooltip("Use the theme's color")
 			rb.Children(func() {
 				ui.Row(c).Gap(4).Children(func() {

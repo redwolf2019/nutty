@@ -9,7 +9,7 @@ import (
 
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
-	"github.com/oneo-me/onevra/source/components"
+	uixsettings "github.com/smallnest/uix/components/settings"
 	"github.com/smallnest/uix/components/tree"
 )
 
@@ -239,9 +239,9 @@ func TestInfoTabs(t *testing.T) {
 		a.info = infoState{
 			tab: infoTabGit,
 			git: gitState{
-				branch:  "main",
-				changes: []gitChange{{" M", "session.go"}, {"??", "settings.go"}},
-				done:    true,
+				branch:   "main",
+				changes:  []gitChange{{" M", "session.go"}, {"??", "settings.go"}},
+				done:     true,
 				diffOpen: "session.go",
 				diffLines: []string{
 					"--- a/session.go",
@@ -315,7 +315,7 @@ func TestSettingsSnapshot(t *testing.T) {
 	for _, cat := range settingsCategories {
 		sw := &settingsWindow{
 			a: a, s: a.settings, last: *a.settings,
-			state: components.SettingsState{Category: cat.id},
+			state: uixsettings.SettingsState{Category: cat.id},
 		}
 		tt := ui.NewTester(sw.view, 760, 540)
 		tt.Frame()
