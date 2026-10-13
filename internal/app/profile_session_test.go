@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
 
 	"nutty/internal/settings"
@@ -98,5 +99,29 @@ func TestPaneShowsWhyItHasNoTerminal(t *testing.T) {
 	}
 	if !tt.HasText(`exec: "fish": executable file not found in $PATH`) {
 		t.Errorf("the pane does not say why it has no terminal, texts: %v", tt.Texts())
+	}
+}
+
+// TestProfileDirFromHome checks that a profile's directory written from
+// "~" reaches the session and its shell written out: the shell starts in
+// the directory as given, and "~/work" is no directory.
+func TestProfileDirFromHome(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	for cwd, want := range map[string]string{
+		"~/work":       filepath.Join(home, "work"),
+		"~":            home,
+		"/tmp/~/work":  "/tmp/~/work",
+		"~other/work":  "~other/work", // another user's home is not ours to guess
+		"relative/dir": "relative/dir",
+	} {
+		a, started := profileApp(t, settings.Profile{Name: "work", CWD: cwd}, errors.New("not started"))
+		s := a.newSession("")
+		if s.dir != want {
+			t.Errorf("profile directory %q: the tab's directory = %q, want %q", cwd, s.dir, want)
+		}
+		if got := (*started)[0].Dir; got != want {
+			t.Errorf("profile directory %q: the shell starts in %q, want %q", cwd, got, want)
+		}
 	}
 }

@@ -86,7 +86,7 @@ func (a *app) newSession(dir string) *session {
 	// where the shell really starts, and Duplicate Tab and a split, which
 	// pass the session's directory on, are not sent back to the profile's.
 	if pr := a.settings.Profile(); s.dir == "" && pr != nil {
-		s.dir = pr.CWD
+		s.dir = expandHome(pr.CWD)
 	}
 	if s.dir == "" {
 		s.dir = homeDir()
@@ -106,6 +106,17 @@ func (a *app) newSession(dir string) *session {
 	}
 	a.activate(s)
 	return s
+}
+
+// expandHome writes out the "~" a directory typed into the settings starts
+// with. The shell is started in the directory as given, with no shell
+// before it to expand the "~": left in, the start fails for want of a
+// directory of that name.
+func expandHome(dir string) string {
+	if dir == "~" || strings.HasPrefix(dir, "~/") {
+		return filepath.Join(homeDir(), dir[1:])
+	}
+	return dir
 }
 
 // newTerm starts a terminal running a shell in the session's directory.
