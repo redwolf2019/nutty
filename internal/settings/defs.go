@@ -245,7 +245,7 @@ var settingsDefs = []settingDef{
 		en("combined", "Combined"), en("separate", "Separate")),
 	dBool("privilege-badge-exit-status", "When Command Finishes", "Show accent dot on tab when a command finishes.", func(s *Settings) *bool { return &s.BadgeExitStatus }, true),
 	dBool("privilege-badge-activity", "When Command Fails", "Show error alert on tab when a command fails.", func(s *Settings) *bool { return &s.BadgeActivity }, true),
-	dBool("privilege-badge-agent-awaiting-input", "When Command Awaits Input", "Detect [y/n], password and ENTER prompts and show the awaiting-input badge.", func(s *Settings) *bool { return &s.BadgeAwaitingInput }, true),
+	dBool("detect-awaiting-input", "When Command Awaits Input", "Detect [y/n], password and ENTER prompts and show the awaiting-input badge.", func(s *Settings) *bool { return &s.BadgeAwaitingInput }, true),
 	dBool("web-pane-persist-cookies", "Stay Signed In", "Keep cookies and site data on disk, so sign-ins survive a restart.", func(s *Settings) *bool { return &s.WebPanePersistCookies }, true),
 
 	// --- Recipes ---
@@ -308,7 +308,7 @@ var settingsGroups = map[string][]settingGroup{
 	},
 	"view": {
 		{"Tab & Title", []string{"title-from-osc", "tab-icon-placement"}},
-		{"Tab Icon & Badge", []string{"privilege-badge-exit-status", "privilege-badge-activity", "privilege-badge-agent-awaiting-input"}},
+		{"Tab Icon & Badge", []string{"privilege-badge-exit-status", "privilege-badge-activity", "detect-awaiting-input"}},
 		{"Web Pane", []string{"web-pane-persist-cookies"}},
 	},
 	"recipes": {
