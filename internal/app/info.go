@@ -211,7 +211,7 @@ func (a *app) infoDirectory(c *ui.Context) {
 					mygo.Clipboard.WriteText(s.dir)
 				})
 				a.infoAction(c, tr("Reveal in Finder"), lucide.FolderOpen(), func() {
-					_ = exec.Command("open", s.dir).Start()
+					openWith(s.dir)
 				})
 				a.infoAction(c, tr("Open in Zed"), lucide.ArrowUpRight(), func() {
 					openZed(s.dir)
@@ -343,12 +343,29 @@ func portOf(name string) string {
 	return ""
 }
 
-// openZed opens dir in Zed, when it is installed.
-func openZed(dir string) {
-	if _, err := os.Stat("/Applications/Zed.app"); err != nil {
-		return
-	}
-	_ = exec.Command("open", "-a", "Zed", dir).Start()
+// openCmd runs macOS's open and waits for it to end, a seam for tests that
+// must not open anything.
+var openCmd = func(args ...string) error {
+	return exec.Command("open", args...).Run()
+}
+
+// openWith runs open in the background and waits for it there. A child
+// that is started and never waited for stays a zombie until the app quits,
+// one for every click.
+func openWith(args ...string) {
+	go func() { _ = openCmd(args...) }()
+}
+
+// openZed opens path in Zed, or with the app the system opens it with when
+// there is no Zed, so a click on a file is never without effect. Launch
+// Services finds Zed wherever it is installed; open fails when it finds
+// none, and the plain open follows.
+func openZed(path string) {
+	go func() {
+		if openCmd("-a", "Zed", path) != nil {
+			_ = openCmd(path)
+		}
+	}()
 }
 
 // loadOutline reads the shell's history for the command marks the Outline
