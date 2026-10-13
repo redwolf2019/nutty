@@ -14,7 +14,9 @@ func (a *app) tabBarView(c *ui.Context) {
 	t := c.Theme()
 	top := a.settings.WindowLayout == "tabs-top"
 	closeID := 0
-	bar := ui.Row(c).FillWidth().Height(38).Shrink(0).Background(t.Surface)
+	// A press on a tab leaves the keyboard focus in the terminal, as a
+	// press on the rail does (see railView).
+	bar := ui.Row(c).KeepFocus().FillWidth().Height(38).Shrink(0).Background(t.Surface)
 	// The border separates the bar from the terminal: below it when the
 	// bar is at the top, above it when at the bottom.
 	if top {
@@ -100,8 +102,12 @@ func (a *app) renameDialog(c *ui.Context) {
 		wp.Children(func() {
 			ui.Column(c).Padding(16).Gap(12).Children(func() {
 				ui.Text(c, tr("Rename Tab")).Bold()
+				// No AutoFocus: the dialog moves the focus to its first
+				// field by itself, and an AutoFocus here runs before the
+				// dialog notes what had the focus, so closing it would
+				// not hand the focus back to the terminal.
 				in := ui.TextInput(c.Key("rename"), &a.rename.buf).
-					Bind(&a.rename.input).AutoFocus()
+					Bind(&a.rename.input)
 				if in.Submitted() {
 					a.commitRename()
 				}
