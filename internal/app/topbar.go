@@ -185,6 +185,7 @@ func (a *app) titleText() string {
 // panel toggle shows or hides it. The open panel's toolbar stays on the
 // strip, as otty always shows it.
 func (a *app) infoToolbar(c *ui.Context) {
+	a.checkInfoTab()
 	t := c.Theme()
 	ui.Box(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {

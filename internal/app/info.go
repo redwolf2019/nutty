@@ -76,6 +76,7 @@ func (a *app) infoView(c *ui.Context) {
 // height and the sections below, as otty draws the panel beside the
 // horizontal tab bar.
 func (a *app) infoColumn(c *ui.Context) {
+	a.checkInfoTab()
 	t := c.Theme()
 	ui.Column(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
@@ -141,6 +142,21 @@ func (a *app) detailsViewEnabled(id string) bool {
 	return true
 }
 
+// checkInfoTab leaves a section the settings have just hidden, while the
+// panel shows it: the section's button is gone from the toolbar, so its
+// content must not stay, with no way to tell what it is, until the panel
+// is closed and opened again. It runs where a frame starts to draw the
+// panel, before the toolbar marks the open section: the strip's toolbar in
+// the Sidebar layout, the panel's column in the Tabs layouts. Info is
+// where a hidden section falls back to, hidden itself or not, so it is
+// left alone: loading it again on every frame would scan the ports without
+// end.
+func (a *app) checkInfoTab() {
+	if a.info.tab != infoTabInfo && !a.detailsViewEnabled(infoTabID(a.info.tab)) {
+		a.loadInfoTab()
+	}
+}
+
 // loadInfoTab loads the open section's data. A section the settings hide
 // falls back to Info. The Info section rescans the ports each time it
 // opens; the others load once and keep their state.
@@ -179,7 +195,10 @@ func (a *app) infoDirChanged() {
 	a.info.git.diffLines = nil
 	a.info.filesDone = false
 	a.info.files = nil
-	if a.info.tab == infoTabGit || a.info.tab == infoTabFiles {
+	// A closed panel loads nothing: every cd and every switch of tabs
+	// would run git or walk the directory for a panel no one sees. The
+	// stale section loads when the panel opens.
+	if a.panel == panelInfo && (a.info.tab == infoTabGit || a.info.tab == infoTabFiles) {
 		a.loadInfoTab()
 	}
 }

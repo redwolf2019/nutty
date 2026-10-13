@@ -205,6 +205,9 @@ func (a *app) closeSession(s *session) {
 		a.activePane = nil
 		a.sel = ""
 		a.refreshTitle()
+		// The Git and Files panels described the session that closed:
+		// without one they must not keep its repository and its files.
+		a.infoDirChanged()
 		return
 	}
 	if idx <= a.active && a.active > 0 {
