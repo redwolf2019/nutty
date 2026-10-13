@@ -89,7 +89,7 @@ func (a *app) newSession(dir string) *session {
 		s.dir = expandHome(pr.CWD)
 	}
 	if s.dir == "" {
-		s.dir = homeDir()
+		s.dir = a.startDir()
 	}
 	p := &pane{}
 	p.term = a.newTerm(s, p)
