@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -142,8 +143,12 @@ func (a *app) detailsViewEnabled(id string) bool {
 }
 
 // loadInfoTab loads the open section's data. A section the settings hide
-// falls back to Info. The Info section rescans the ports each time it
-// opens; the others load once and keep their state.
+// falls back to Info. The Info, Outline and Git sections load again each
+// time they open, since the ports, the shell's history and the repository
+// change while the panel shows something else: read once, the Git section
+// would list a commit's files long after the commit. The Files section
+// loads once per directory and keeps its tree, with the folders that are
+// open in it.
 func (a *app) loadInfoTab() {
 	if !a.detailsViewEnabled(infoTabID(a.info.tab)) {
 		a.info.tab = infoTabInfo
@@ -152,13 +157,9 @@ func (a *app) loadInfoTab() {
 	case infoTabInfo:
 		a.loadPorts()
 	case infoTabOutline:
-		if !a.info.outlineDone {
-			a.loadOutline()
-		}
+		a.loadOutline()
 	case infoTabGit:
-		if !a.info.git.done {
-			a.loadGit()
-		}
+		a.loadGit()
 	case infoTabFiles:
 		if !a.info.filesDone {
 			a.loadFiles()
@@ -170,7 +171,8 @@ func (a *app) loadInfoTab() {
 // after the working directory changes, and reloads the one that is open,
 // so the Git and Files panels follow the shell into the new directory
 // instead of keeping the previous one's state. The other sections (Info,
-// Outline) read live state and need no invalidation.
+// Outline) do not describe the directory, and load again whenever they
+// open, so they need no invalidation.
 func (a *app) infoDirChanged() {
 	a.info.git.done = false
 	a.info.git.branch = ""
@@ -275,8 +277,11 @@ func actionGreen(t *ui.Theme) ui.Color {
 	return ui.Hex("#78877C")
 }
 
-// loadPorts scans the ports the window's processes listen on, in the
-// background, and puts them on the panel when the scan ends.
+// loadPorts scans the TCP ports that are open for listening, in the
+// background, and puts them on the panel when the scan ends. The scan is
+// lsof's of the whole machine, as far as the user may see it: the ports of
+// every process, not only of this window's shells, whose process MyGo's
+// terminal does not tell.
 func (a *app) loadPorts() {
 	if a.win == nil {
 		return
@@ -289,24 +294,37 @@ func (a *app) loadPorts() {
 		out, err := exec.CommandContext(ctx, "lsof", "-nP", "-iTCP", "-sTCP:LISTEN").Output()
 		var ports []string
 		if err == nil {
-			seen := map[string]bool{}
-			for _, line := range strings.Split(string(out), "\n") {
-				f := strings.Fields(line)
-				if len(f) < 9 {
-					continue
-				}
-				if p := portOf(f[8]); p != "" && !seen[p] {
-					seen[p] = true
-					ports = append(ports, p)
-				}
-			}
-			sort.Strings(ports)
+			ports = listeningPorts(string(out))
 		}
 		a.win.Update(func() {
 			a.info.ports = ports
 			a.info.portsDone = true
 		})
 	}()
+}
+
+// listeningPorts reads lsof -nP -iTCP -sTCP:LISTEN output: the port of each
+// line's name column, each port once, in the order of the numbers. Sorted
+// as strings, 10000 would come before 8080.
+func listeningPorts(out string) []string {
+	var ports []string
+	seen := map[string]bool{}
+	for _, line := range strings.Split(out, "\n") {
+		f := strings.Fields(line)
+		if len(f) < 9 {
+			continue
+		}
+		if p := portOf(f[8]); p != "" && !seen[p] {
+			seen[p] = true
+			ports = append(ports, p)
+		}
+	}
+	sort.Slice(ports, func(i, j int) bool {
+		a, _ := strconv.Atoi(ports[i])
+		b, _ := strconv.Atoi(ports[j])
+		return a < b
+	})
+	return ports
 }
 
 // portOf extracts the port from an lsof name like "*:8000 (LISTEN)" or
@@ -342,6 +360,7 @@ func (a *app) loadOutline() {
 		return
 	}
 	a.info.outline = nil
+	a.info.outlineDone = false
 	go func() {
 		var cmds []string
 		hf := os.Getenv("HISTFILE")
@@ -349,15 +368,7 @@ func (a *app) loadOutline() {
 			hf = filepath.Join(homeDir(), ".zsh_history")
 		}
 		if b, err := os.ReadFile(hf); err == nil {
-			for _, line := range strings.Split(string(b), "\n") {
-				// Strip the ": <epoch>:<duration>;" stamp when there is one.
-				if i := strings.LastIndex(line, ";"); strings.HasPrefix(line, ": ") && i >= 0 {
-					line = line[i+1:]
-				}
-				if line = strings.TrimSpace(line); line != "" {
-					cmds = append(cmds, line)
-				}
-			}
+			cmds = parseZshHistory(b)
 			if len(cmds) > 200 {
 				cmds = cmds[len(cmds)-200:]
 			}
@@ -368,6 +379,50 @@ func (a *app) loadOutline() {
 			a.info.outlineDone = true
 		})
 	}()
+}
+
+// parseZshHistory reads a zsh history file into its commands, oldest
+// first, as zsh reads the file back:
+//
+//   - zsh saves some bytes above 0x82 "metafied", as 0x83 and the byte
+//     xor 32. They are common in UTF-8, so a command with Chinese in it
+//     reads as broken text until they are put back.
+//   - A command that spans lines is saved with a backslash before each of
+//     its newlines; it is one command, not one per line.
+//   - With EXTENDED_HISTORY a command follows a ": <epoch>:<duration>;"
+//     stamp. The stamp ends at its first ";": the command may hold more.
+//     Without it, a command that starts with a colon is saved as "\:".
+func parseZshHistory(b []byte) []string {
+	plain := make([]byte, 0, len(b))
+	for i := 0; i < len(b); i++ {
+		if b[i] == 0x83 && i+1 < len(b) {
+			i++
+			plain = append(plain, b[i]^32)
+			continue
+		}
+		plain = append(plain, b[i])
+	}
+	var cmds []string
+	lines := strings.Split(string(plain), "\n")
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		for strings.HasSuffix(line, "\\") && i+1 < len(lines) {
+			i++
+			line = strings.TrimSuffix(line, "\\") + "\n" + lines[i]
+		}
+		if rest, ok := strings.CutPrefix(line, ": "); ok {
+			stamp, cmd, ok := strings.Cut(rest, ";")
+			if ok && strings.Trim(stamp, "0123456789:") == "" {
+				line = cmd
+			}
+		} else if strings.HasPrefix(line, "\\:") {
+			line = line[1:]
+		}
+		if line = strings.TrimSpace(line); line != "" {
+			cmds = append(cmds, line)
+		}
+	}
+	return cmds
 }
 
 // infoOutlineView is the Outline section: the shell's command marks, one
