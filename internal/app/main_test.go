@@ -137,6 +137,7 @@ func TestPaletteItems(t *testing.T) {
 }
 
 func TestViewChrome(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh") // the rail names the shell
 	a := testApp()
 	tt := ui.NewTester(a.view, 1000, 700)
 	if !tt.HasText("No sessions") {
