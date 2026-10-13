@@ -45,7 +45,6 @@ func TestSweepChrome(t *testing.T) {
 		a.sessions = []*session{s}
 		a.active = 0
 		a.activePane = p
-		a.sel = sessionID(1)
 	})
 	render("info", func(a *app) {
 		a.panel = panelInfo

@@ -85,7 +85,8 @@ func (a *app) tabItem(c *ui.Context, i int, s *session) (close bool) {
 	return close
 }
 
-// renameDialog renames the active tab in place, as Finder renames a file.
+// renameDialog renames a tab in place, as Finder renames a file: the tab
+// the dialog was opened for (rename.target), which a double click chooses.
 func (a *app) renameDialog(c *ui.Context) {
 	if !a.rename.open {
 		return
@@ -132,7 +133,7 @@ func (a *app) confirmDialog(c *ui.Context) {
 		wp.Children(func() {
 			ui.Column(c).Padding(16).Gap(12).Children(func() {
 				ui.Text(c, tr("Close Tab?")).Bold()
-				ui.Text(c, fmt.Sprintf(tr("“%s” and its processes will end."), a.pendingClose.displayTitle())).
+				ui.Text(c, fmt.Sprintf(tr("“%s” and its processes will end."), tabLabel(a.pendingClose))).
 					FontSize(12).TextColor(t.TextMuted)
 				ui.Row(c).FillWidth().Justify(ui.End).Gap(8).Children(func() {
 					if ui.Button(c, tr("Cancel")).Clicked() {
