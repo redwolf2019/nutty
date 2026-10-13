@@ -64,11 +64,25 @@ var (
 	apps   = map[int]*app{} // window ID -> app
 )
 
+// shared is the one set of settings of the process, loaded on first use.
+var shared *settings.Settings
+
+// sharedSettings is the settings every window and the menu use. A copy per
+// window let them drift apart: a change made in one window never reached
+// the others, and the next save from any of them wrote its stale copy over
+// the change. It is called on the UI thread only.
+func sharedSettings() *settings.Settings {
+	if shared == nil {
+		shared = settings.Load()
+	}
+	return shared
+}
+
 // newWindow opens a window with one session in it. The title bar is
 // hidden so the view draws its own under the traffic lights, as otty
 // does.
 func newWindow() *app {
-	s := settings.Load()
+	s := sharedSettings()
 	a := &app{
 		settings: s,
 		sideOpen: s.SidebarVisible,

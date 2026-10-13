@@ -60,11 +60,29 @@ func (a *app) scrollbackBytes() int {
 	return n * 100
 }
 
-// ApplySettings puts the settings into effect: the terminals' theme and
-// font, the window's opacity and size, and a redraw. The creation-time
-// options (cursor, scrollback, Option-as-Alt) reach new sessions, in
-// newTerm.
+// ApplySettings puts the settings into effect in every window: they are
+// one set (see sharedSettings), so a change made from one window, or from
+// its Settings window, shows in the others as well.
 func (a *app) ApplySettings() {
+	a.applySettings()
+	appsMu.Lock()
+	var others []*app
+	for _, o := range apps {
+		if o != a && o.settings == a.settings {
+			others = append(others, o)
+		}
+	}
+	appsMu.Unlock()
+	for _, o := range others {
+		o.applySettings()
+	}
+}
+
+// applySettings puts the settings into effect in this window: the
+// terminals' theme and font, the window's opacity and size, and a redraw.
+// The creation-time options (cursor, scrollback, Option-as-Alt) reach new
+// sessions, in newTerm.
+func (a *app) applySettings() {
 	if a.settings == nil {
 		return
 	}
