@@ -65,6 +65,7 @@ type splitNode struct {
 // pane is a terminal with the handle that gives it focus.
 type pane struct {
 	term   *terminal.Terminal
+	err    error // why there is no terminal, for the pane to say
 	handle ui.Handle
 	dead   bool
 }
@@ -79,6 +80,14 @@ var sessionIDs int
 func (a *app) newSession(dir string) *session {
 	sessionIDs++
 	s := &session{id: sessionIDs, dir: dir, started: time.Now()}
+	// A tab opened without a directory starts where the default profile
+	// says, else at home. The session takes the directory here, not the
+	// terminal in newTerm, so the tab, the title and the info panel show
+	// where the shell really starts, and Duplicate Tab and a split, which
+	// pass the session's directory on, are not sent back to the profile's.
+	if pr := a.settings.Profile(); s.dir == "" && pr != nil {
+		s.dir = pr.CWD
+	}
 	if s.dir == "" {
 		s.dir = homeDir()
 	}
@@ -108,24 +117,14 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 	dir := s.dir
 	command := a.settings.Command
 	env := a.settings.EnvList()
-	// The default profile overrides what new sessions run and where, and
-	// may pick its own themes, as otty's profiles do.
+	// The default profile overrides what new sessions run, as otty's
+	// profiles do; where they start is newSession's, and their themes
+	// termThemes's, which the panes already open follow too.
 	if pr := a.settings.Profile(); pr != nil {
 		if pr.Command != "" {
 			command = pr.Command
 		}
-		if pr.CWD != "" {
-			dir = pr.CWD
-		}
 		env = append(append([]string{}, env...), settings.ValidEnv(pr.Env)...)
-		if pr.Theme != "" || pr.ThemeDark != "" {
-			light := settings.ThemeFor(pr.Theme, false)
-			dark := settings.ThemeFor(pr.ThemeDark, true)
-			if pr.ThemeDark == "" {
-				dark = settings.ThemeFor(pr.Theme, true)
-			}
-			theme, darkTheme = light, dark
-		}
 	}
 	term, err := newTerminal(terminal.Options{
 		Command:     settings.ShellArgs(command),
@@ -156,8 +155,10 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 		OpenLink: a.openLink,
 	})
 	if err != nil {
-		// Without its library the terminal cannot run; show the pane as
-		// closed rather than crash.
+		// Without its library, or the program the settings name, the
+		// terminal cannot run; show the pane as closed, with the reason,
+		// rather than crash.
+		p.err = err
 		return nil
 	}
 	return term
@@ -190,7 +191,13 @@ func (a *app) renderPane(c *ui.Context, p *pane) {
 			t := c.Theme()
 			ui.Column(c).Fill().Center().Gap(8).Children(func() {
 				ui.Text(c, tr("Terminal unavailable")).TextColor(t.TextMuted)
-				ui.Text(c, tr("the terminal library could not be loaded")).TextColor(t.TextMuted).FontSize(11)
+				// The reason is the terminal's own: the library that did
+				// not load, or the command that was not found.
+				why := tr("the terminal library could not be loaded")
+				if p.err != nil {
+					why = p.err.Error()
+				}
+				ui.Text(c, why).TextColor(t.TextMuted).FontSize(11)
 			})
 			return
 		}
