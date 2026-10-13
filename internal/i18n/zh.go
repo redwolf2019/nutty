@@ -4,6 +4,7 @@
 package i18n
 
 var table = map[string]string{
+	" copy": " 副本",
 	"A command to run when the pane opens":                            "分屏打开时要运行的命令",
 	"A tab of the details panel on the right; the arrows reorder it.": "右侧详情面板中的一个标签页；箭头可调整顺序。",
 	"A thicker stroke, as font-thicken does on macOS.":                "更粗的笔画，类似 macOS 的加粗字体。",
@@ -14,6 +15,7 @@ var table = map[string]string{
 	"After Current Tab":            "当前标签页之后",
 	"Agent":                        "智能体",
 	"Agent Behavior":               "智能体行为",
+	"Agent Panel":                  "Agent 面板",
 	"Agents":                       "智能体",
 	"All":                          "全部",
 	"All Settings":                 "所有设置",
@@ -463,7 +465,6 @@ var table = map[string]string{
 	"Switch Open Tab...":          "切换已打开标签页...",
 	"Switch Pane to Folder":       "切换面板到文件夹",
 	"Switch Pane to Terminal":     "切换面板到终端",
-	"Switch to":                   "切换到",
 	"Switch to ":                  "切换到 ",
 	"Sync & Backup":               "同步与备份",
 	"Syntax: Auto-detect":         "语法：自动检测",
@@ -529,11 +530,10 @@ var table = map[string]string{
 	"The window's width.":                                                         "窗口的宽度。",
 	"Theme":                                                                       "主题",
 	"Theme...":                                                                    "主题...",
-	"Theme:":                                                                      "主题：",
 	"Theme: ":                                                                     "主题： ",
-	"Themes":                                                                      "主题",
 	"Thicker Text":                                                                "加粗文本",
 	"Thinking":                                                                    "思考中",
+	"This is a UI skeleton: the demo agent writes the replies and onevra renders the markdown. Replace agent.go to wire a real model.": "这是一个 UI 骨架：回复由演示 Agent 生成，markdown 用 onevra 渲染。接入真实模型时替换 agent.go。",
 	"Title Prefix":                                                                "标题前缀",
 	"Toggle Agent Chat":                                                           "切换 Agent 对话",
 	"Toggle Details Panel":                                                        "切换详情面板",
