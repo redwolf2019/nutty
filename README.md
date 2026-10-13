@@ -27,8 +27,8 @@ The app draws its own UI with MyGo's native toolkit. It uses no webview.
   Zed), the running process, and the ports in use.
 - **Command palette.** Cmd+K opens it. It runs window actions, jumps to
   sessions, and picks a terminal theme.
-- **Ghostty themes.** The palette offers 25 themes, or "Follow system" to
-  match the window's light or dark appearance.
+- **Ghostty themes.** The palette offers 16 curated themes, or "Follow
+  system" to match the window's light or dark appearance.
 - **Agent chat.** A panel on the right renders the chat as markdown. The
   built-in agent is a demo; `agent.go` defines the interface to wire a
   real model.
