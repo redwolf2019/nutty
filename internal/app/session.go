@@ -160,6 +160,7 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 		// closed rather than crash.
 		return nil
 	}
+	a.runAfter(term)
 	return term
 }
 
