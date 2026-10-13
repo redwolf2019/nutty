@@ -1,6 +1,8 @@
 package app
 
 import (
+	"path/filepath"
+
 	"nutty/internal/settings"
 
 	"github.com/egoist/mygo/ui"
@@ -14,6 +16,12 @@ import (
 // command palette overlays it all.
 func (a *app) view(c *ui.Context) {
 	c.SetTheme(settings.OttyTheme(c.Theme().Dark))
+	// The terminals read their output on goroutines of their own, so what
+	// the shell reported is known before the frame is built: follow it into
+	// a new directory first, so this frame's tab, title and info panel show
+	// where it is. Tracking after the build would draw the old directory
+	// and wait for another frame.
+	a.trackWorkingDir()
 	if a.settings.WindowLayout == "sidebar-left" {
 		a.viewSidebar(c)
 	} else {
@@ -38,22 +46,21 @@ func (a *app) view(c *ui.Context) {
 		State: &a.palette,
 		Items: items,
 	})
-	// The terminals above have read this frame's output; follow the shell
-	// into a directory it reports, so the tab, the title and the info
-	// panel show where it is.
-	a.trackWorkingDir()
 }
 
 // trackWorkingDir follows the active shell's directory: when the terminal
 // reports a new working directory (OSC 7), the session takes it, so the
 // rail tab, the strip's user@host:dir title and the info panel's Working
-// Directory show where the shell is, as otty follows its shell.
+// Directory show where the shell is, as otty follows its shell. The report
+// is whatever a program in the terminal wrote, and the directory goes to
+// git and open as an argument, so only an absolute path is taken: a
+// relative one, or one that reads as an option ("-a…"), is ignored.
 func (a *app) trackWorkingDir() {
 	s := a.currentSession()
 	if s == nil || a.activePane == nil || a.activePane.term == nil {
 		return
 	}
-	if d := a.activePane.term.Dir(); d != "" && d != s.dir {
+	if d := a.activePane.term.Dir(); filepath.IsAbs(d) && d != s.dir {
 		s.dir = d
 		a.refreshTitle()
 		// The Git and Files panels describe the working directory; a new

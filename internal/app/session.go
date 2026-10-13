@@ -143,7 +143,7 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 	term, err := newTerminal(terminal.Options{
 		Command:     settings.ShellArgs(command),
 		Dir:         dir,
-		Env:         env,
+		Env:         a.shellEnv(command, env),
 		Font:        a.termFont(),
 		Theme:       theme,
 		DarkTheme:   darkTheme,
