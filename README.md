@@ -45,7 +45,7 @@ Go 1.27 downloads itself if needed. The first run fetches
 ## Package
 
 ```sh
-go run github.com/egoist/mygo/cmd/mygo@v0.4.2 build
+go run github.com/egoist/mygo/cmd/mygo@v0.4.8 build
 ```
 
 The result is a signed `Nutty.app` and a DMG under `dist/`.
