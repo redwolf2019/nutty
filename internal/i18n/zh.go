@@ -69,6 +69,7 @@ var table = map[string]string{
 	"Click in the prompt to move the shell cursor.": "点击提示符以移动 Shell 光标。",
 	"Click to rebind":          "点击修改快捷键",
 	"Clipboard":                "剪贴板",
+	"Close Pane":               "关闭分屏",
 	"Close Picture in Picture": "关闭画中画",
 	"Close Tab":                "关闭标签页",
 	"Close Tab?":               "关闭标签页？",

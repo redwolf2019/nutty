@@ -2,6 +2,8 @@ package settings
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"nutty/internal/i18n"
@@ -88,16 +90,19 @@ func (sw *settingsWindow) keybindList(c *ui.Context) {
 }
 
 // keybindRows is the visible actions in group order: the ones otty binds
-// by default first, then the rest, filtered by the search.
+// by default first, then the rest by name, filtered by the search.
 func (sw *settingsWindow) keybindRows() []keybindRow {
 	rows := []keybindRow{}
 	seen := map[string]bool{}
 	add := func(action string) {
-		if seen[action] {
+		// The label table names "goto_tab:1" as "goto_tab_1"; they are one
+		// action, and get one row.
+		name := strings.ReplaceAll(action, ":", "_")
+		if seen[name] {
 			return
 		}
-		seen[action] = true
-		label := keybindActions[strings.ReplaceAll(action, ":", "_")]
+		seen[name] = true
+		label := keybindActions[name]
 		if label == "" {
 			label = action
 		}
@@ -107,9 +112,20 @@ func (sw *settingsWindow) keybindRows() []keybindRow {
 	for _, kb := range defaultKeybinds {
 		add(kb.action)
 	}
-	for action := range keybindActions {
+	for _, action := range slices.Sorted(maps.Keys(keybindActions)) {
 		add(action)
 	}
+	// Keep a group's rows together, so the list draws one header a group;
+	// the groups stay in the order they first appear.
+	first := map[string]int{}
+	for i, r := range rows {
+		if g := keybindGroupOf(r.action); first[g] == 0 {
+			first[g] = i + 1
+		}
+	}
+	slices.SortStableFunc(rows, func(a, b keybindRow) int {
+		return first[keybindGroupOf(a.action)] - first[keybindGroupOf(b.action)]
+	})
 	if q := strings.ToLower(sw.keys.search); q != "" {
 		filtered := rows[:0]
 		for _, r := range rows {
@@ -189,11 +205,20 @@ func (sw *settingsWindow) captureCombo(c *ui.Context) {
 		ui.Super | ui.Ctrl | ui.Alt | ui.Shift} {
 		for _, key := range recordKeys {
 			if c.Shortcut(m, key) {
-				sw.recordCombo(modName(m) + keyName(key))
+				sw.recordCombo(comboName(m, key))
 				return
 			}
 		}
 	}
+}
+
+// comboName is the otty trigger of a key with its modifiers: "cmd+shift+k",
+// or the bare key name when no modifier is held.
+func comboName(m ui.Modifiers, key ui.Key) string {
+	if m == 0 {
+		return keyName(key)
+	}
+	return modName(m) + "+" + keyName(key)
 }
 
 // recordKeys are the keys the recorder accepts, otty's key names.
