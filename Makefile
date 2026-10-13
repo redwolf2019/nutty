@@ -14,6 +14,10 @@
 
 .PHONY: run build fmt vet lint test snapshot icon package clean
 
+# A bare `make` builds, as the list above says; without this it would
+# take the first target below and launch the app.
+.DEFAULT_GOAL := build
+
 # GOLANGCI is the linter, wherever it lives: the GOPATH copy when the
 # PATH one is missing.
 GOLANGCI := $(shell command -v golangci-lint 2>/dev/null || echo $(shell go env GOPATH)/bin/golangci-lint)
@@ -45,14 +49,15 @@ snapshot:
 	NUTTY_SNAPSHOT=1 go test -run 'TestSnapshot|TestSiteShots|TestFilesPanel' -v ./internal/app/
 
 # Icon regenerates resources/icon.png, which MyGo packages into the app
-# bundle. Run it after changing assets/nutty.svg.
+# bundle. Run it after changing internal/app/assets/nutty.svg.
 icon:
 	go run ./tools/icon
 
-# Package builds a signed Nutty.app and a DMG under out/ with MyGo's
-# own build, as the release workflow does.
+# Package builds Nutty.app and a DMG under out/ with MyGo's own build,
+# as the release workflow does. The app is ad hoc signed: mygo.json names
+# no signing identity, and nothing is notarized.
 package:
-	go run github.com/egoist/mygo/cmd/mygo@v0.4.2 build -platform darwin/universal -o out
+	go run github.com/egoist/mygo/cmd/mygo@v0.4.8 build -platform darwin/universal -o out
 
 clean:
 	rm -rf out dist

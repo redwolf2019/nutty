@@ -43,7 +43,17 @@ jobs:
           PY
 
       - name: Build the universal app and disk image
-        run: go run github.com/egoist/mygo/cmd/mygo@v0.4.2 build -platform darwin/universal -o out
+        run: go run github.com/egoist/mygo/cmd/mygo@v0.4.8 build -platform darwin/universal -o out
+
+      # mygo names the image "Nutty <version>.dmg". GitHub turns the space
+      # into a dot when the asset is uploaded, but the checksum file would
+      # keep the name on disk, and `shasum -c` then looks for a file the
+      # release does not have. Give the image the name it is published
+      # under, so the two agree.
+      - name: Name the disk image as the release publishes it
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mv "out/darwin-universal/Nutty ${VERSION}.dmg" "out/darwin-universal/Nutty.${VERSION}.dmg"
 
       # mygo read the aligned version above; GoReleaser refuses a dirty
       # tree, so put mygo.json back the way the tag has it.
