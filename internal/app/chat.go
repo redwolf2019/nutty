@@ -67,8 +67,8 @@ func (a *app) chatBody(c *ui.Context) {
 				if len(a.chat.msgs) == 0 {
 					ui.Column(c).FillWidth().Gap(8).Padding(8, 0).Children(func() {
 						nutTile(c, 56)
-						ui.Text(c, "Agent 面板").TextColor(t.Text).Bold()
-						ui.Text(c, "这是一个 UI 骨架：回复由演示 Agent 生成，markdown 用 onevra 渲染。接入真实模型时替换 agent.go。").TextColor(t.TextMuted).FontSize(12)
+						ui.Text(c, tr("Agent Panel")).TextColor(t.Text).Bold()
+						ui.Text(c, tr("This is a UI skeleton: the demo agent writes the replies and onevra renders the markdown. Replace agent.go to wire a real model.")).TextColor(t.TextMuted).FontSize(12)
 					})
 				}
 				for i := range a.chat.msgs {

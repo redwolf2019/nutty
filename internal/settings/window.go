@@ -583,6 +583,11 @@ func (sw *settingsWindow) sync() {
 		if sw.last.Language != sw.s.Language {
 			i18n.SetLang(sw.s.Language)
 			sw.app.ApplyKeybinds()
+			// The window's title is native, set once as the window was
+			// made: it does not redraw with the view, so retitle it.
+			if sw.win != nil {
+				sw.win.SetTitle(i18n.Tr("Settings"))
+			}
 		}
 		sw.last = *sw.s
 		sw.lastJSON = now

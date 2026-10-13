@@ -34,10 +34,12 @@ func (a *app) paletteItems() []command.Item {
 		{Label: tr("Appearance: Light"), Keywords: []string{"theme"}, Icon: lucide.Sun(), OnSelect: a.appearanceLight},
 		{Label: tr("Appearance: Dark"), Keywords: []string{"theme"}, Icon: lucide.Moon(), OnSelect: a.appearanceDark},
 	}
+	// "Follow system" is the one theme name with a translation; the others
+	// are proper nouns, which tr returns unchanged.
 	for _, name := range settings.ThemeNames() {
 		name := name
 		items = append(items, command.Item{
-			Label:    tr("Theme: ") + name,
+			Label:    tr("Theme: ") + tr(name),
 			Keywords: []string{"terminal", "color", "palette"},
 			Icon:     lucide.Palette(),
 			OnSelect: func() { a.setTermTheme(name) },
