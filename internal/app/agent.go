@@ -61,20 +61,20 @@ func (a *demoAgent) Stop() {
 // answer is the demo's markdown reply for a prompt.
 func (a *demoAgent) answer(cwd, prompt string) string {
 	p := strings.TrimSpace(prompt)
-	switch {
-	case p == "/help":
+	switch p {
+	case "/help":
 		return "## 我能做什么\n\n" +
 			"这是一个演示 Agent —— UI 骨架已就位，接入真实 LLM 只需替换 `agent.go` 里的 `Reply`。\n\n" +
 			"- `/readme` —— 渲染当前目录的 README\n" +
 			"- `/status` —— 看看当前目录\n" +
 			"- 其他输入 —— 得到一张 markdown 卡片\n\n" +
 			"试试 `/readme`。"
-	case p == "/status":
+	case "/status":
 		return "## 状态\n\n" +
 			"- 目录: `" + cwd + "`\n" +
 			"- 模型: `demo`（内置演示）\n\n" +
 			"> 渲染结果由 onevra 的 markdown 插件绘制。"
-	case p == "/readme":
+	case "/readme":
 		md, err := os.ReadFile(readmePath(cwd))
 		if err != nil {
 			return "## 没有找到 README\n\n在 `" + cwd + "` 下没有 `README.md`。\n\n> 写一个吧，这个面板会把它渲染成文档。"

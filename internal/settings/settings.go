@@ -326,7 +326,7 @@ func Path() string {
 func Load() *Settings {
 	s := Default()
 	if b, err := os.ReadFile(Path()); err == nil {
-		json.Unmarshal(b, s)
+		_ = json.Unmarshal(b, s)
 	}
 	s.Normalize()
 	return s

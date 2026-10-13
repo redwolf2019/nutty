@@ -29,7 +29,7 @@ func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
 		ui.Text(c, Path()).FontSize(11).TextColor(t.TextMuted).SingleLine()
 		ui.Row(c).Gap(8).Children(func() {
 			sw.advButton(c, "adv-open-config", i18n.Tr("Open"), func() {
-				exec.Command("open", Path()).Start()
+				_ = exec.Command("open", Path()).Start()
 			})
 			sw.advButton(c, "adv-reload-config", i18n.Tr("Reload"), func() {
 				*sw.s = *Load()
@@ -51,7 +51,7 @@ func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
 					return
 				}
 				if b, err := json.MarshalIndent(sw.s, "", "  "); err == nil {
-					os.WriteFile(path, b, 0o644)
+					_ = os.WriteFile(path, b, 0o644)
 				}
 			})
 			sw.advButton(c, "adv-import", i18n.Tr("Import…"), func() {

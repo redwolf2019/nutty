@@ -32,7 +32,7 @@ func SetLang(v string) {
 }
 
 func locale() string {
-	defer func() { recover() }()
+	defer func() { _ = recover() }()
 	if strings.HasPrefix(mygo.App.Locale(), "zh") {
 		return "chinese"
 	}

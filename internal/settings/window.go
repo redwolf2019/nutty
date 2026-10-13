@@ -75,16 +75,6 @@ var settingsCategories = []struct{ id, title string }{
 	{"account", "Account"},
 }
 
-// categoryTitle is a category's sidebar label in the interface language.
-func categoryTitle(id string) string {
-	for _, cat := range settingsCategories {
-		if cat.id == id {
-			return i18n.Tr(cat.title)
-		}
-	}
-	return i18n.Tr(id)
-}
-
 func (sw *settingsWindow) view(c *ui.Context) {
 	c.SetTheme(OttyTheme(c.Theme().Dark))
 	i18n.SetLang(sw.s.Language) // the shell's chrome follows the setting

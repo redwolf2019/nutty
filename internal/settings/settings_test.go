@@ -431,10 +431,10 @@ func TestSettingsSnapshot(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := png.Encode(f, tt.Image()); err != nil {
-			f.Close()
+			_ = f.Close()
 			t.Fatal(err)
 		}
-		f.Close()
+		_ = f.Close()
 		t.Log("wrote /tmp/nutty-settings-" + cat.id + ".png")
 	}
 }

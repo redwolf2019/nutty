@@ -93,7 +93,7 @@ func newWindow() *app {
 		for _, s := range a.sessions {
 			for _, p := range s.panes {
 				if p.term != nil {
-					p.term.Close()
+					_ = p.term.Close()
 				}
 			}
 		}
@@ -196,7 +196,7 @@ func (a *app) closeSession(s *session) {
 	}
 	for _, p := range s.panes {
 		if p.term != nil {
-			p.term.Close()
+			_ = p.term.Close()
 		}
 	}
 	a.sessions = append(a.sessions[:idx], a.sessions[idx+1:]...)
@@ -307,14 +307,7 @@ func (a *app) copyPath() {
 
 func (a *app) revealInFinder() {
 	if s := a.currentSession(); s != nil {
-		exec.Command("open", s.dir).Start()
-	}
-}
-
-// openInZed opens the session's directory in Zed, when installed.
-func (a *app) openInZed() {
-	if s := a.currentSession(); s != nil {
-		openZed(s.dir)
+		_ = exec.Command("open", s.dir).Start()
 	}
 }
 

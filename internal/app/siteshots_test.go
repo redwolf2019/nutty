@@ -78,10 +78,10 @@ func TestSiteShots(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := png.Encode(f, tt.Image()); err != nil {
-			f.Close()
+			_ = f.Close()
 			t.Fatal(err)
 		}
-		f.Close()
+		_ = f.Close()
 		t.Log("wrote /tmp/nutty-site-" + name + ".png")
 	}
 	render("hero", panelChat, false)

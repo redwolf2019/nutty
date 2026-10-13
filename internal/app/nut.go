@@ -18,8 +18,8 @@ var nuttySVG = ui.MustParseSVG([]byte(nuttySVGSource))
 func nutTile(c *ui.Context, size float32) ui.Element {
 	return ui.Box(c).Size(size, size).Radius(size / 5).
 		Background(ui.Hex("#000000")).Clip().Children(func() {
-			ui.Column(c).Fill().Center().Children(func() {
-				ui.Image(c, nuttySVG).Size(size*0.78, size*0.78).Shrink(0)
-			})
+		ui.Column(c).Fill().Center().Children(func() {
+			ui.Image(c, nuttySVG).Size(size*0.78, size*0.78).Shrink(0)
 		})
+	})
 }

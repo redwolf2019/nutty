@@ -16,42 +16,42 @@ func (a *app) railView(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Width(a.sidebarWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 1, 0, 0).BorderColor(t.Border).Children(func() {
-			// The section header: "TABS" and a filter icon that opens the
-			// command palette, as otty draws them. Hiding the rail is the
-			// strip's left pair, next to the new-tab button.
-			ui.Row(c).FillWidth().Padding(0, 9, 0, 18).Gap(6).Children(func() {
-				ui.Text(c, tr("TABS")).Bold().FontSize(11).TextColor(faint(t)).
-					LetterSpacing(1).Grow(1)
-				ib := ui.ButtonBase(c.Key("tabs-menu")).Padding(0).
-					Radius(t.Radius).FocusRing(false).Tooltip(tr("Tabs menu"))
-				ib.Children(func() {
-					ui.Image(c, lucide.ListFilter()).Size(15, 15)
-				})
-				if ib.Clicked() {
-					a.paletteOpen = true
-				}
+		// The section header: "TABS" and a filter icon that opens the
+		// command palette, as otty draws them. Hiding the rail is the
+		// strip's left pair, next to the new-tab button.
+		ui.Row(c).FillWidth().Padding(0, 9, 0, 18).Gap(6).Children(func() {
+			ui.Text(c, tr("TABS")).Bold().FontSize(11).TextColor(faint(t)).
+				LetterSpacing(1).Grow(1)
+			ib := ui.ButtonBase(c.Key("tabs-menu")).Padding(0).
+				Radius(t.Radius).FocusRing(false).Tooltip(tr("Tabs menu"))
+			ib.Children(func() {
+				ui.Image(c, lucide.ListFilter()).Size(15, 15)
 			})
-			closeID := 0
-			ui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
-				ui.Column(c).FillWidth().Padding(4, 9, 8, 9).Gap(4).Children(func() {
-					for i, s := range a.sessions {
-						if a.railItem(c, i, s) {
-							closeID = s.id
-						}
-					}
-				})
-			})
-			// A close clicked while building must not shift the loop;
-			// close after the rail is built.
-			if closeID != 0 {
-				for _, s := range a.sessions {
-					if s.id == closeID {
-						a.closeSession(s)
-						break
-					}
-				}
+			if ib.Clicked() {
+				a.paletteOpen = true
 			}
 		})
+		closeID := 0
+		ui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
+			ui.Column(c).FillWidth().Padding(4, 9, 8, 9).Gap(4).Children(func() {
+				for i, s := range a.sessions {
+					if a.railItem(c, i, s) {
+						closeID = s.id
+					}
+				}
+			})
+		})
+		// A close clicked while building must not shift the loop;
+		// close after the rail is built.
+		if closeID != 0 {
+			for _, s := range a.sessions {
+				if s.id == closeID {
+					a.closeSession(s)
+					break
+				}
+			}
+		}
+	})
 }
 
 // railItem draws one session tab, reporting whether its close button was
@@ -60,7 +60,7 @@ func (a *app) railView(c *ui.Context) {
 func (a *app) railItem(c *ui.Context, i int, s *session) (close bool) {
 	t := c.Theme()
 	on := i == a.active
-	b := ui.ButtonBase(c.Key("rail" + sessionID(s.id))).FillWidth().
+	b := ui.ButtonBase(c.Key("rail"+sessionID(s.id))).FillWidth().
 		Padding(9, 10, 9, 17).Radius(t.Radius).FocusRing(false)
 	if on {
 		b.Background(selectedCard(t)).Shadow(0, 1, 4, 0, ui.RGBA(0, 0, 0, 0.08)).

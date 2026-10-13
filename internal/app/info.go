@@ -67,8 +67,8 @@ func (a *app) infoView(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
-			a.infoBody(c)
-		})
+		a.infoBody(c)
+	})
 }
 
 // infoColumn is the info panel of the Tabs layouts: a full-height column
@@ -79,11 +79,11 @@ func (a *app) infoColumn(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
-			ui.Box(c).FillWidth().Shrink(0).Height(a.stripBar(c)).Children(func() {
-				a.infoToolbarRow(c)
-			})
-			a.infoBody(c)
+		ui.Box(c).FillWidth().Shrink(0).Height(a.stripBar(c)).Children(func() {
+			a.infoToolbarRow(c)
 		})
+		a.infoBody(c)
+	})
 }
 
 // infoBody is the panel's sections, the ones of the open tab.
@@ -209,7 +209,7 @@ func (a *app) infoDirectory(c *ui.Context) {
 					mygo.Clipboard.WriteText(s.dir)
 				})
 				a.infoAction(c, tr("Reveal in Finder"), lucide.FolderOpen(), func() {
-					exec.Command("open", s.dir).Start()
+					_ = exec.Command("open", s.dir).Start()
 				})
 				a.infoAction(c, tr("Open in Zed"), lucide.ArrowUpRight(), func() {
 					openZed(s.dir)
@@ -251,7 +251,7 @@ func (a *app) infoPorts(c *ui.Context) {
 // green label, as otty draws them.
 func (a *app) infoAction(c *ui.Context, label string, icon *ui.SVG, onClick func()) {
 	t := c.Theme()
-	b := ui.ButtonBase(c.Key("info-" + strings.ReplaceAll(label, " ", "-"))).
+	b := ui.ButtonBase(c.Key("info-"+strings.ReplaceAll(label, " ", "-"))).
 		FillWidth().Padding(5, 0).Radius(t.Radius).FocusRing(false)
 	b.Children(func() {
 		// The row fills the button so the label starts at the panel's left
@@ -330,7 +330,7 @@ func openZed(dir string) {
 	if _, err := os.Stat("/Applications/Zed.app"); err != nil {
 		return
 	}
-	exec.Command("open", "-a", "Zed", dir).Start()
+	_ = exec.Command("open", "-a", "Zed", dir).Start()
 }
 
 // loadOutline reads the shell's history for the command marks the Outline
@@ -526,7 +526,7 @@ func (a *app) infoGitView(c *ui.Context) {
 func (a *app) gitChangeRow(c *ui.Context, ch gitChange) {
 	t := c.Theme()
 	open := a.info.git.diffOpen == ch.path
-	row := ui.ButtonBase(c.Key("git-" + ch.path)).FillWidth().Padding(4, 0).
+	row := ui.ButtonBase(c.Key("git-"+ch.path)).FillWidth().Padding(4, 0).
 		Radius(t.Radius).FocusRing(false)
 	row.Children(func() {
 		ui.Row(c).FillWidth().Gap(6).Children(func() {
@@ -672,7 +672,7 @@ func buildFileTree(dir string, depth int, nodes *int) []tree.Item {
 			open := false
 			it.Open = &open
 			it.Children = buildFileTree(path, depth+1, nodes)
-			it.Action = func() { exec.Command("open", path).Start() }
+			it.Action = func() { _ = exec.Command("open", path).Start() }
 		} else {
 			it.Action = func() { openZed(path) }
 		}

@@ -95,10 +95,10 @@ func TestSnapshot(t *testing.T) {
 				t.Fatal(err)
 			}
 			if err := png.Encode(f, tt.Image()); err != nil {
-				f.Close()
+				_ = f.Close()
 				t.Fatal(err)
 			}
-			f.Close()
+			_ = f.Close()
 			t.Log("wrote /tmp/nutty-" + name + ".png")
 		}
 	}
@@ -149,10 +149,10 @@ func TestStripToggles(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := png.Encode(f, tt.Image()); err != nil {
-			f.Close()
+			_ = f.Close()
 			t.Fatal(err)
 		}
-		f.Close()
+		_ = f.Close()
 		t.Log("wrote /tmp/nutty-" + name + ".png")
 	}
 	render("strip-toggles-sidebar", "sidebar-left", true, 0)
@@ -201,10 +201,10 @@ func TestInfoTabs(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := png.Encode(f, tt.Image()); err != nil {
-			f.Close()
+			_ = f.Close()
 			t.Fatal(err)
 		}
-		f.Close()
+		_ = f.Close()
 		t.Log("wrote /tmp/nutty-" + name + ".png")
 	}
 	base := func() *app {
@@ -301,10 +301,10 @@ func TestLayoutSnapshot(t *testing.T) {
 				t.Fatal(err)
 			}
 			if err := png.Encode(f, tt.Image()); err != nil {
-				f.Close()
+				_ = f.Close()
 				t.Fatal(err)
 			}
-			f.Close()
+			_ = f.Close()
 			t.Log("wrote /tmp/nutty-layout-" + layout + open + ".png")
 		}
 	}
@@ -354,7 +354,7 @@ func TestFilesPanel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := png.Encode(f, tt.Image()); err != nil {
 		t.Fatal(err)
 	}

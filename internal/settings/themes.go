@@ -57,10 +57,7 @@ func ThemeFor(name string, dark bool) *terminal.Theme {
 // which Ghostty's themes cover, with follow-system first.
 func ThemeNames() []string {
 	names := []string{"Follow system"}
-	for _, n := range OttyThemeNames {
-		names = append(names, n)
-	}
-	return names
+	return append(names, OttyThemeNames...)
 }
 
 // OttyThemeNames are the themes otty ships, read from its bundle.

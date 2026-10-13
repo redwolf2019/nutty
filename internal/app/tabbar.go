@@ -51,7 +51,7 @@ func (a *app) tabBarView(c *ui.Context) {
 func (a *app) tabItem(c *ui.Context, i int, s *session) (close bool) {
 	t := c.Theme()
 	on := i == a.active
-	b := ui.ButtonBase(c.Key("tab" + sessionID(s.id))).Padding(6, 12).
+	b := ui.ButtonBase(c.Key("tab"+sessionID(s.id))).Padding(6, 12).
 		Radius(t.Radius).FocusRing(false)
 	if on {
 		b.Background(selectedCard(t)).BorderWidth(1).BorderColor(t.Border)
@@ -91,8 +91,8 @@ func (a *app) renameDialog(c *ui.Context) {
 	w, h := c.Size()
 	ui.DialogBase(c, &a.rename.open, func(back, wp ui.Element) {
 		back.Background(ui.RGBA(0, 0, 0, 0.4))
-		wp.Width(min(w-48, 340)).MaxHeight(h - 48).
-			Radius(t.Radius + 2).Background(t.Background).
+		wp.Width(min(w-48, 340)).MaxHeight(h-48).
+			Radius(t.Radius+2).Background(t.Background).
 			Shadow(0, 10, 30, 0, ui.RGBA(0, 0, 0, 0.3))
 		wp.Children(func() {
 			ui.Column(c).Padding(16).Gap(12).Children(func() {
@@ -124,7 +124,7 @@ func (a *app) confirmDialog(c *ui.Context) {
 	open := true
 	ui.DialogBase(c, &open, func(back, wp ui.Element) {
 		back.Background(ui.RGBA(0, 0, 0, 0.4))
-		wp.Width(min(w-48, 340)).Radius(t.Radius + 2).Background(t.Background).
+		wp.Width(min(w-48, 340)).Radius(t.Radius+2).Background(t.Background).
 			Shadow(0, 10, 30, 0, ui.RGBA(0, 0, 0, 0.3))
 		wp.Children(func() {
 			ui.Column(c).Padding(16).Gap(12).Children(func() {

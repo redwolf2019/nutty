@@ -20,8 +20,8 @@ func (a *app) SaveSettings() {
 	if err != nil {
 		return
 	}
-	os.MkdirAll(filepath.Dir(settings.Path()), 0o755)
-	os.WriteFile(settings.Path(), b, 0o644)
+	_ = os.MkdirAll(filepath.Dir(settings.Path()), 0o755)
+	_ = os.WriteFile(settings.Path(), b, 0o644)
 }
 
 // sidebarWidth is the width of the tabs rail, from the settings.

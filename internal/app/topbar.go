@@ -188,8 +188,8 @@ func (a *app) infoToolbar(c *ui.Context) {
 	t := c.Theme()
 	ui.Box(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
-			a.infoToolbarRow(c)
-		})
+		a.infoToolbarRow(c)
+	})
 }
 
 // infoToolbarRow is the info panel's mode switch: the section that is open
@@ -260,8 +260,8 @@ func (a *app) chatToolbar(c *ui.Context) {
 	t := c.Theme()
 	ui.Box(c).Width(360).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
-			a.chatToolbarRow(c)
-		})
+		a.chatToolbarRow(c)
+	})
 }
 
 // chatToolbarRow is the chat panel's header: the nut, the "Agent" title

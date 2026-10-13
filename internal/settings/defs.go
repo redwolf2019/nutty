@@ -22,7 +22,6 @@ type settingDef struct {
 	ptr   func(*Settings) any // the field a control binds to, when direct
 	get   func(*Settings) any
 	set   func(*Settings, any)
-	inert bool // persists, but this build does not act on it
 }
 
 // enumOpt is one choice of an enum setting: the stored value and the
@@ -325,16 +324,6 @@ func defByKey(key string) *settingDef {
 	for i := range settingsDefs {
 		if settingsDefs[i].key == key {
 			return &settingsDefs[i]
-		}
-	}
-	return nil
-}
-
-// extraDefByKey is the registry entry of an unmodeled key, or nil.
-func extraDefByKey(key string) *extraDef {
-	for i := range extraSettings {
-		if extraSettings[i].key == key {
-			return &extraSettings[i]
 		}
 	}
 	return nil

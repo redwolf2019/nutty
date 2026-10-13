@@ -32,10 +32,10 @@ var jetbrainsMonoBoldItalicTTF []byte
 // use, so Core Text matches bold and italic by trait instead of the app
 // synthesizing them.
 func registerFonts() {
-	ui.RegisterFont(jetbrainsMonoTTF, "JetBrains Mono")
-	ui.RegisterFont(jetbrainsMonoBoldTTF, "JetBrains Mono")
-	ui.RegisterFont(jetbrainsMonoItalicTTF, "JetBrains Mono")
-	ui.RegisterFont(jetbrainsMonoBoldItalicTTF, "JetBrains Mono")
+	_ = ui.RegisterFont(jetbrainsMonoTTF, "JetBrains Mono")
+	_ = ui.RegisterFont(jetbrainsMonoBoldTTF, "JetBrains Mono")
+	_ = ui.RegisterFont(jetbrainsMonoItalicTTF, "JetBrains Mono")
+	_ = ui.RegisterFont(jetbrainsMonoBoldItalicTTF, "JetBrains Mono")
 }
 
 // termFont is the terminal font the settings pick: otty's JetBrains Mono

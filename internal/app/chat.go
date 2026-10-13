@@ -14,12 +14,11 @@ import (
 // chatState is the agent chat panel: the transcript, the composer and
 // where the scroll is.
 type chatState struct {
-	msgs     []chatMsg
-	value    string
-	busy     bool
-	started  time.Time
-	scroll   ui.ScrollState
-	lastText int // len of the last streamed text, to re-parse markdown
+	msgs    []chatMsg
+	value   string
+	busy    bool
+	started time.Time
+	scroll  ui.ScrollState
 }
 
 // chatMsg is one line of the transcript. The assistant's markdown parses
@@ -39,8 +38,8 @@ func (a *app) chatView(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Width(360).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
-			a.chatBody(c)
-		})
+		a.chatBody(c)
+	})
 }
 
 // chatColumn is the agent panel of the Tabs layouts: a full-height column
@@ -51,11 +50,11 @@ func (a *app) chatColumn(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Width(360).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
-			ui.Box(c).FillWidth().Shrink(0).Height(a.stripBar(c)).Children(func() {
-				a.chatToolbarRow(c)
-			})
-			a.chatBody(c)
+		ui.Box(c).FillWidth().Shrink(0).Height(a.stripBar(c)).Children(func() {
+			a.chatToolbarRow(c)
 		})
+		a.chatBody(c)
+	})
 }
 
 // chatBody is the panel's transcript and composer.
@@ -107,8 +106,8 @@ func (a *app) chatBubble(c *ui.Context, m *chatMsg) {
 		ui.Row(c).FillWidth().Justify(ui.End).Children(func() {
 			ui.Box(c).MaxWidthPercent(82).Padding(9, 13).
 				Radius(t.Radius + 4).Background(t.Accent).Children(func() {
-					ui.Text(c, m.text).TextColor(t.AccentText)
-				})
+				ui.Text(c, m.text).TextColor(t.AccentText)
+			})
 		})
 		return
 	}

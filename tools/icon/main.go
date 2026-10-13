@@ -24,12 +24,12 @@ func main() {
 	tile := 0.84 * float32(w)
 	tt := ui.NewTester(func(c *ui.Context) {
 		ui.Column(c).Fill().Center().Children(func() {
-			ui.Box(c).Size(tile, tile).Radius(tile*0.22).
+			ui.Box(c).Size(tile, tile).Radius(tile * 0.22).
 				Background(ui.Hex("#000000")).Clip().Children(func() {
-					ui.Column(c).Fill().Center().Children(func() {
-						ui.Image(c, svg).Size(tile, tile)
-					})
+				ui.Column(c).Fill().Center().Children(func() {
+					ui.Image(c, svg).Size(tile, tile)
 				})
+			})
 		})
 	}, int(w), int(h))
 	img := tt.Image()
@@ -78,7 +78,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := png.Encode(f, img); err != nil {
 		log.Fatal(err)
 	}

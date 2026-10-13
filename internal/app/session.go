@@ -280,7 +280,7 @@ func (a *app) closePane(p *pane) {
 	}
 	s.removePane(p)
 	if p.term != nil {
-		p.term.Close()
+		_ = p.term.Close()
 	}
 	if a.activePane == p {
 		a.activePane = s.panes[0]
@@ -346,7 +346,7 @@ func sessionAllDead(s *session) bool {
 func (a *app) openLink(link string) bool {
 	link = strings.TrimPrefix(link, "file://")
 	if _, err := os.Stat(link); err == nil {
-		exec.Command("open", link).Start()
+		_ = exec.Command("open", link).Start()
 		return true
 	}
 	return false
