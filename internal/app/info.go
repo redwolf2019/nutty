@@ -386,24 +386,18 @@ func (a *app) loadOutline() {
 //
 //   - zsh saves some bytes above 0x82 "metafied", as 0x83 and the byte
 //     xor 32. They are common in UTF-8, so a command with Chinese in it
-//     reads as broken text until they are put back.
+//     reads as broken text until they are put back. They are put back
+//     last, a command at a time: zsh finds the lines and the stamp in the
+//     bytes as it saved them, so a byte that decodes to a newline or a
+//     semicolon belongs to its command and splits nothing.
 //   - A command that spans lines is saved with a backslash before each of
 //     its newlines; it is one command, not one per line.
 //   - With EXTENDED_HISTORY a command follows a ": <epoch>:<duration>;"
 //     stamp. The stamp ends at its first ";": the command may hold more.
 //     Without it, a command that starts with a colon is saved as "\:".
 func parseZshHistory(b []byte) []string {
-	plain := make([]byte, 0, len(b))
-	for i := 0; i < len(b); i++ {
-		if b[i] == 0x83 && i+1 < len(b) {
-			i++
-			plain = append(plain, b[i]^32)
-			continue
-		}
-		plain = append(plain, b[i])
-	}
 	var cmds []string
-	lines := strings.Split(string(plain), "\n")
+	lines := strings.Split(string(b), "\n")
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		for strings.HasSuffix(line, "\\") && i+1 < len(lines) {
@@ -418,11 +412,25 @@ func parseZshHistory(b []byte) []string {
 		} else if strings.HasPrefix(line, "\\:") {
 			line = line[1:]
 		}
-		if line = strings.TrimSpace(line); line != "" {
+		if line = strings.TrimSpace(unmetafy(line)); line != "" {
 			cmds = append(cmds, line)
 		}
 	}
 	return cmds
+}
+
+// unmetafy puts back the bytes zsh saved metafied in s.
+func unmetafy(s string) string {
+	plain := make([]byte, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		if s[i] == 0x83 && i+1 < len(s) {
+			i++
+			plain = append(plain, s[i]^32)
+			continue
+		}
+		plain = append(plain, s[i])
+	}
+	return string(plain)
 }
 
 // infoOutlineView is the Outline section: the shell's command marks, one
