@@ -80,7 +80,7 @@ func (a *app) newSession(dir string) *session {
 	sessionIDs++
 	s := &session{id: sessionIDs, dir: dir, started: time.Now()}
 	if s.dir == "" {
-		s.dir = homeDir()
+		s.dir = a.startDir()
 	}
 	p := &pane{}
 	p.term = a.newTerm(s, p)
