@@ -1,7 +1,6 @@
 package app
 
 import (
-	"os/exec"
 	"slices"
 	"sync"
 
@@ -241,6 +240,9 @@ func (a *app) closeSession(s *session) {
 		a.active = 0
 		a.activePane = nil
 		a.refreshTitle()
+		// The Git and Files panels described the session that closed:
+		// without one they must not keep its repository and its files.
+		a.infoDirChanged()
 		return
 	}
 	if idx <= a.active && a.active > 0 {
@@ -343,7 +345,7 @@ func (a *app) copyPath() {
 
 func (a *app) revealInFinder() {
 	if s := a.currentSession(); s != nil {
-		_ = exec.Command("open", s.dir).Start()
+		openWith(s.dir)
 	}
 }
 

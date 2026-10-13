@@ -346,8 +346,12 @@ func TestFilesPanel(t *testing.T) {
 	a.info = infoState{
 		tab:       infoTabFiles,
 		filesDone: true,
-		files:     buildFileTree(s.dir, 0, &nodes),
+		filesDir:  s.dir,
 	}
+	// nodes is how many entries the listing leaves out, which the tree
+	// counts in its last row.
+	a.info.files, nodes = listFolder(s.dir)
+	a.info.filesMore = map[string]int{"": nodes}
 	a.panel = panelInfo
 	tt := ui.NewTester(a.view, 1280, 780)
 	tt.SetTitleBar(ui.TitleBar{Height: 31, Left: 60})

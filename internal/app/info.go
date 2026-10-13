@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,6 +38,8 @@ type infoState struct {
 	outlineDone bool
 	git         gitState
 	files       []tree.Item
+	filesDir    string         // the directory files lists
+	filesMore   map[string]int // the entries a long folder left out, by its row's path
 	filesDone   bool
 }
 
@@ -76,6 +79,7 @@ func (a *app) infoView(c *ui.Context) {
 // height and the sections below, as otty draws the panel beside the
 // horizontal tab bar.
 func (a *app) infoColumn(c *ui.Context) {
+	a.checkInfoTab()
 	t := c.Theme()
 	ui.Column(c).Width(a.detailsPanelWidth()).FillHeight().Shrink(0).Background(t.Surface).
 		BorderWidth(0, 0, 0, 1).BorderColor(t.Border).Children(func() {
@@ -141,9 +145,28 @@ func (a *app) detailsViewEnabled(id string) bool {
 	return true
 }
 
+// checkInfoTab leaves a section the settings have just hidden, while the
+// panel shows it: the section's button is gone from the toolbar, so its
+// content must not stay, with no way to tell what it is, until the panel
+// is closed and opened again. It runs where a frame starts to draw the
+// panel, before the toolbar marks the open section: the strip's toolbar in
+// the Sidebar layout, the panel's column in the Tabs layouts. Info is
+// where a hidden section falls back to, hidden itself or not, so it is
+// left alone: loading it again on every frame would scan the ports without
+// end.
+func (a *app) checkInfoTab() {
+	if a.info.tab != infoTabInfo && !a.detailsViewEnabled(infoTabID(a.info.tab)) {
+		a.loadInfoTab()
+	}
+}
+
 // loadInfoTab loads the open section's data. A section the settings hide
-// falls back to Info. The Info section rescans the ports each time it
-// opens; the others load once and keep their state.
+// falls back to Info. The Info, Outline and Git sections load again each
+// time they open, since the ports, the shell's history and the repository
+// change while the panel shows something else: read once, the Git section
+// would list a commit's files long after the commit. The Files section
+// loads once per directory and keeps its tree, with the folders that are
+// open in it.
 func (a *app) loadInfoTab() {
 	if !a.detailsViewEnabled(infoTabID(a.info.tab)) {
 		a.info.tab = a.detailsTabs()[0]
@@ -152,13 +175,9 @@ func (a *app) loadInfoTab() {
 	case infoTabInfo:
 		a.loadPorts()
 	case infoTabOutline:
-		if !a.info.outlineDone {
-			a.loadOutline()
-		}
+		a.loadOutline()
 	case infoTabGit:
-		if !a.info.git.done {
-			a.loadGit()
-		}
+		a.loadGit()
 	case infoTabFiles:
 		if !a.info.filesDone {
 			a.loadFiles()
@@ -170,7 +189,8 @@ func (a *app) loadInfoTab() {
 // after the working directory changes, and reloads the one that is open,
 // so the Git and Files panels follow the shell into the new directory
 // instead of keeping the previous one's state. The other sections (Info,
-// Outline) read live state and need no invalidation.
+// Outline) do not describe the directory, and load again whenever they
+// open, so they need no invalidation.
 func (a *app) infoDirChanged() {
 	a.info.git.done = false
 	a.info.git.branch = ""
@@ -179,7 +199,10 @@ func (a *app) infoDirChanged() {
 	a.info.git.diffLines = nil
 	a.info.filesDone = false
 	a.info.files = nil
-	if a.info.tab == infoTabGit || a.info.tab == infoTabFiles {
+	// A closed panel loads nothing: every cd and every switch of tabs
+	// would run git or walk the directory for a panel no one sees. The
+	// stale section loads when the panel opens.
+	if a.panel == panelInfo && (a.info.tab == infoTabGit || a.info.tab == infoTabFiles) {
 		a.loadInfoTab()
 	}
 }
@@ -209,7 +232,7 @@ func (a *app) infoDirectory(c *ui.Context) {
 					mygo.Clipboard.WriteText(s.dir)
 				})
 				a.infoAction(c, tr("Reveal in Finder"), lucide.FolderOpen(), func() {
-					_ = exec.Command("open", s.dir).Start()
+					openWith(s.dir)
 				})
 				a.infoAction(c, tr("Open in Zed"), lucide.ArrowUpRight(), func() {
 					openZed(s.dir)
@@ -275,8 +298,11 @@ func actionGreen(t *ui.Theme) ui.Color {
 	return ui.Hex("#78877C")
 }
 
-// loadPorts scans the ports the window's processes listen on, in the
-// background, and puts them on the panel when the scan ends.
+// loadPorts scans the TCP ports that are open for listening, in the
+// background, and puts them on the panel when the scan ends. The scan is
+// lsof's of the whole machine, as far as the user may see it: the ports of
+// every process, not only of this window's shells, whose process MyGo's
+// terminal does not tell.
 func (a *app) loadPorts() {
 	if a.win == nil {
 		return
@@ -289,24 +315,37 @@ func (a *app) loadPorts() {
 		out, err := exec.CommandContext(ctx, "lsof", "-nP", "-iTCP", "-sTCP:LISTEN").Output()
 		var ports []string
 		if err == nil {
-			seen := map[string]bool{}
-			for _, line := range strings.Split(string(out), "\n") {
-				f := strings.Fields(line)
-				if len(f) < 9 {
-					continue
-				}
-				if p := portOf(f[8]); p != "" && !seen[p] {
-					seen[p] = true
-					ports = append(ports, p)
-				}
-			}
-			sort.Strings(ports)
+			ports = listeningPorts(string(out))
 		}
 		a.win.Update(func() {
 			a.info.ports = ports
 			a.info.portsDone = true
 		})
 	}()
+}
+
+// listeningPorts reads lsof -nP -iTCP -sTCP:LISTEN output: the port of each
+// line's name column, each port once, in the order of the numbers. Sorted
+// as strings, 10000 would come before 8080.
+func listeningPorts(out string) []string {
+	var ports []string
+	seen := map[string]bool{}
+	for _, line := range strings.Split(out, "\n") {
+		f := strings.Fields(line)
+		if len(f) < 9 {
+			continue
+		}
+		if p := portOf(f[8]); p != "" && !seen[p] {
+			seen[p] = true
+			ports = append(ports, p)
+		}
+	}
+	sort.Slice(ports, func(i, j int) bool {
+		a, _ := strconv.Atoi(ports[i])
+		b, _ := strconv.Atoi(ports[j])
+		return a < b
+	})
+	return ports
 }
 
 // portOf extracts the port from an lsof name like "*:8000 (LISTEN)" or
@@ -325,12 +364,29 @@ func portOf(name string) string {
 	return ""
 }
 
-// openZed opens dir in Zed, when it is installed.
-func openZed(dir string) {
-	if _, err := os.Stat("/Applications/Zed.app"); err != nil {
-		return
-	}
-	_ = exec.Command("open", "-a", "Zed", dir).Start()
+// openCmd runs macOS's open and waits for it to end, a seam for tests that
+// must not open anything.
+var openCmd = func(args ...string) error {
+	return exec.Command("open", args...).Run()
+}
+
+// openWith runs open in the background and waits for it there. A child
+// that is started and never waited for stays a zombie until the app quits,
+// one for every click.
+func openWith(args ...string) {
+	go func() { _ = openCmd(args...) }()
+}
+
+// openZed opens path in Zed, or with the app the system opens it with when
+// there is no Zed, so a click on a file is never without effect. Launch
+// Services finds Zed wherever it is installed; open fails when it finds
+// none, and the plain open follows.
+func openZed(path string) {
+	go func() {
+		if openCmd("-a", "Zed", path) != nil {
+			_ = openCmd(path)
+		}
+	}()
 }
 
 // loadOutline reads the shell's history for the command marks the Outline
@@ -342,6 +398,7 @@ func (a *app) loadOutline() {
 		return
 	}
 	a.info.outline = nil
+	a.info.outlineDone = false
 	go func() {
 		var cmds []string
 		hf := os.Getenv("HISTFILE")
@@ -349,15 +406,7 @@ func (a *app) loadOutline() {
 			hf = filepath.Join(homeDir(), ".zsh_history")
 		}
 		if b, err := os.ReadFile(hf); err == nil {
-			for _, line := range strings.Split(string(b), "\n") {
-				// Strip the ": <epoch>:<duration>;" stamp when there is one.
-				if i := strings.LastIndex(line, ";"); strings.HasPrefix(line, ": ") && i >= 0 {
-					line = line[i+1:]
-				}
-				if line = strings.TrimSpace(line); line != "" {
-					cmds = append(cmds, line)
-				}
-			}
+			cmds = parseZshHistory(b)
 			if len(cmds) > 200 {
 				cmds = cmds[len(cmds)-200:]
 			}
@@ -368,6 +417,58 @@ func (a *app) loadOutline() {
 			a.info.outlineDone = true
 		})
 	}()
+}
+
+// parseZshHistory reads a zsh history file into its commands, oldest
+// first, as zsh reads the file back:
+//
+//   - zsh saves some bytes above 0x82 "metafied", as 0x83 and the byte
+//     xor 32. They are common in UTF-8, so a command with Chinese in it
+//     reads as broken text until they are put back. They are put back
+//     last, a command at a time: zsh finds the lines and the stamp in the
+//     bytes as it saved them, so a byte that decodes to a newline or a
+//     semicolon belongs to its command and splits nothing.
+//   - A command that spans lines is saved with a backslash before each of
+//     its newlines; it is one command, not one per line.
+//   - With EXTENDED_HISTORY a command follows a ": <epoch>:<duration>;"
+//     stamp. The stamp ends at its first ";": the command may hold more.
+//     Without it, a command that starts with a colon is saved as "\:".
+func parseZshHistory(b []byte) []string {
+	var cmds []string
+	lines := strings.Split(string(b), "\n")
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		for strings.HasSuffix(line, "\\") && i+1 < len(lines) {
+			i++
+			line = strings.TrimSuffix(line, "\\") + "\n" + lines[i]
+		}
+		if rest, ok := strings.CutPrefix(line, ": "); ok {
+			stamp, cmd, ok := strings.Cut(rest, ";")
+			if ok && strings.Trim(stamp, "0123456789:") == "" {
+				line = cmd
+			}
+		} else if strings.HasPrefix(line, "\\:") {
+			line = line[1:]
+		}
+		if line = strings.TrimSpace(unmetafy(line)); line != "" {
+			cmds = append(cmds, line)
+		}
+	}
+	return cmds
+}
+
+// unmetafy puts back the bytes zsh saved metafied in s.
+func unmetafy(s string) string {
+	plain := make([]byte, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		if s[i] == 0x83 && i+1 < len(s) {
+			i++
+			plain = append(plain, s[i]^32)
+			continue
+		}
+		plain = append(plain, s[i])
+	}
+	return string(plain)
 }
 
 // infoOutlineView is the Outline section: the shell's command marks, one
@@ -399,17 +500,20 @@ func (a *app) loadGit() {
 		return
 	}
 	a.info.git.done = false
+	// The session and its directory belong to the UI thread: read them here,
+	// not in the loader.
+	s := a.currentSession()
+	dir := ""
+	if s != nil {
+		dir = s.dir
+	}
 	go func() {
-		s := a.currentSession()
-		dir := ""
 		var branch string
 		var changes []gitChange
 		if s != nil {
-			dir = s.dir
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			out, err := exec.CommandContext(ctx, "git", "-C", dir,
-				"status", "--porcelain=v1", "-b").Output()
+			out, err := exec.CommandContext(ctx, "git", gitStatusArgs(dir)...).Output()
 			if err == nil {
 				branch, changes = parseGitStatus(string(out))
 			}
@@ -439,25 +543,47 @@ func staleInfoCommit(cur, loaded *session, dir string) bool {
 	return loaded != nil && loaded.dir != dir
 }
 
-// parseGitStatus reads git status --porcelain=v1 -b output: the branch
-// from the "## " header, and one change per other line, keeping the raw
+// gitStatusArgs is the git status the Git section runs in dir. With -z the
+// entries end in NUL and their paths come as they are: without it git
+// quotes a path with a space or a non-ASCII letter in it.
+func gitStatusArgs(dir string) []string {
+	return []string{"-C", dir, "status", "--porcelain=v1", "-b", "-z"}
+}
+
+// gitDiffArgs is the git diff of one path of the status. The status lists
+// paths from the repository's root, so the pathspec is anchored there:
+// dir may be a directory below it.
+func gitDiffArgs(dir, path string, staged bool) []string {
+	args := []string{"-C", dir, "diff"}
+	if staged {
+		args = append(args, "--cached")
+	}
+	return append(args, "--", ":(top,literal)"+path)
+}
+
+// parseGitStatus reads git status --porcelain=v1 -b -z output: the branch
+// from the "## " header, and one change per other entry, keeping the raw
 // two-letter status. A detached HEAD reports the branch as "HEAD".
 func parseGitStatus(out string) (branch string, changes []gitChange) {
-	for _, line := range strings.Split(out, "\n") {
+	entries := strings.Split(out, "\x00")
+	for i := 0; i < len(entries); i++ {
+		line := entries[i]
 		if len(line) < 4 {
 			continue
 		}
 		if strings.HasPrefix(line, "## ") {
-			branch = strings.TrimPrefix(strings.Fields(line)[1], "#")
-			if i := strings.Index(branch, "..."); i >= 0 {
-				branch = branch[:i]
-			}
+			// "main...origin/main [ahead 1]", "HEAD (no branch)", or, in a
+			// repository without a commit, "No commits yet on main".
+			branch = strings.TrimPrefix(line[3:], "No commits yet on ")
+			branch, _, _ = strings.Cut(branch, "...")
+			branch, _, _ = strings.Cut(branch, " ")
 			continue
 		}
-		changes = append(changes, gitChange{
-			status: line[:2],
-			path:   strings.TrimSpace(line[3:]),
-		})
+		changes = append(changes, gitChange{status: line[:2], path: line[3:]})
+		// A rename or a copy is followed by the path it came from.
+		if strings.ContainsAny(line[:2], "RC") {
+			i++
+		}
 	}
 	return branch, changes
 }
@@ -470,22 +596,27 @@ func (a *app) loadGitDiff(path string, staged bool) {
 	}
 	a.info.git.diffOpen = path
 	a.info.git.diffLines = nil
+	s := a.currentSession()
+	if s == nil {
+		return
+	}
+	dir := s.dir
 	go func() {
-		s := a.currentSession()
-		var lines []string
-		if s != nil {
-			args := []string{"-C", s.dir, "diff"}
-			if staged {
-				args = append(args, "--cached")
-			}
-			args = append(args, "--", path)
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			defer cancel()
-			if out, err := exec.CommandContext(ctx, "git", args...).Output(); err == nil {
-				lines = strings.Split(strings.TrimRight(string(out), "\n"), "\n")
-			}
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		// A nil diff draws as "Reading…": a failed git shows its error.
+		lines := []string{}
+		out, err := exec.CommandContext(ctx, "git", gitDiffArgs(dir, path, staged)...).Output()
+		if err != nil {
+			lines = []string{err.Error()}
+		} else if len(out) > 0 {
+			lines = strings.Split(strings.TrimRight(string(out), "\n"), "\n")
 		}
 		a.win.Update(func() {
+			// Another row was opened, or this one closed, while git ran.
+			if a.info.git.diffOpen != path || staleInfoCommit(a.currentSession(), s, dir) {
+				return
+			}
 			a.info.git.diffLines = lines
 		})
 	}()
@@ -608,24 +739,31 @@ func diffRed(t *ui.Theme) ui.Color {
 	return ui.Hex("#b35959")
 }
 
-// loadFiles walks the working directory into the tree the Files section
-// shows, as otty's quick directory browser. The walk is capped so a large
-// tree cannot stall the panel: 600 nodes and 8 levels. Dot directories
-// and .DS_Store are skipped; a directory opens in Finder, a file in Zed.
+// loadFiles lists the working directory for the tree the Files section
+// shows, as otty's quick directory browser: its own entries only. A folder
+// of the tree is listed when it is first opened (see fileTree), so nothing
+// is walked that the user does not look at, however deep or wide the tree
+// is, and a folder never comes up empty because a bigger one beside it
+// used up a budget. Dot directories and .DS_Store are skipped; a folder
+// opens in place, a file in Zed.
 func (a *app) loadFiles() {
 	if a.win == nil {
 		return
 	}
 	a.info.files = nil
 	a.info.filesDone = false
+	// The session and its directory belong to the UI thread: read them here,
+	// not in the walk.
+	s := a.currentSession()
+	dir := ""
+	if s != nil {
+		dir = s.dir
+	}
 	go func() {
-		s := a.currentSession()
-		dir := ""
 		var items []tree.Item
+		more := 0
 		if s != nil {
-			dir = s.dir
-			nodes := 0
-			items = buildFileTree(dir, 0, &nodes)
+			items, more = listFolder(dir)
 		}
 		a.win.Update(func() {
 			// A directory changed mid-walk: the newer walk owns the panel,
@@ -633,56 +771,54 @@ func (a *app) loadFiles() {
 			if staleInfoCommit(a.currentSession(), s, dir) {
 				return
 			}
-			a.info.files = items
+			a.info.files, a.info.filesDir = items, dir
+			a.info.filesMore = map[string]int{"": more}
 			a.info.filesDone = true
 		})
 	}()
 }
 
-// fileTreeMaxNodes and fileTreeMaxDepth cap the Files walk.
-const (
-	fileTreeMaxNodes = 600
-	fileTreeMaxDepth = 8
-)
+// fileTreeMaxNodes caps the entries one folder lists. The panel draws
+// every row of the tree on each frame, so a folder of a hundred thousand
+// files must not put them all there.
+const fileTreeMaxNodes = 600
 
-// buildFileTree builds the uix tree items of dir, depth levels deep. The
-// count caps the total nodes, so a deep tree ends with an elided level
-// rather than a slow walk.
-func buildFileTree(dir string, depth int, nodes *int) []tree.Item {
-	if depth >= fileTreeMaxDepth || *nodes >= fileTreeMaxNodes {
-		return nil
-	}
+// listFolder lists one folder as the Files section shows it: its entries
+// in the order of their names, without .DS_Store and the dot directories,
+// each folder closed and not yet listed itself (nil Children). more is how
+// many entries were left out past fileTreeMaxNodes. A folder that cannot
+// be read lists nothing; the list is never nil, which is how fileTree
+// tells a folder that was listed from one that was not.
+func listFolder(dir string) (items []tree.Item, more int) {
+	items = []tree.Item{}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil
+		return items, 0
 	}
-	var items []tree.Item
 	for _, e := range entries {
 		name := e.Name()
 		if name == ".DS_Store" || (e.IsDir() && strings.HasPrefix(name, ".")) {
 			continue
 		}
-		if *nodes >= fileTreeMaxNodes {
-			break
+		if len(items) == fileTreeMaxNodes {
+			more++
+			continue
 		}
-		*nodes++
 		it := tree.Item{Label: name}
-		path := filepath.Join(dir, name)
 		if e.IsDir() {
 			open := false
 			it.Open = &open
-			it.Children = buildFileTree(path, depth+1, nodes)
-			it.Action = func() { _ = exec.Command("open", path).Start() }
 		} else {
+			path := filepath.Join(dir, name)
 			it.Action = func() { openZed(path) }
 		}
 		items = append(items, it)
 	}
-	return items
+	return items, more
 }
 
 // infoFilesView is the Files section: the working directory as a tree,
-// with folders that open in Finder and files that open in Zed, as otty's
+// with folders that open in place and files that open in Zed, as otty's
 // Files tab browses the project. The tree draws a folder icon on each
 // directory and a file icon on each file, as otty does.
 func (a *app) infoFilesView(c *ui.Context) {
@@ -696,20 +832,27 @@ func (a *app) infoFilesView(c *ui.Context) {
 			ui.Text(c, tr("No files")).TextColor(t.TextMuted)
 			return
 		}
-		a.fileTree(c, a.info.files, 0)
+		a.fileTree(c, a.info.files, "", 0)
 	})
 }
 
-// fileTree draws one level of the Files section's tree. A directory shows
-// a chevron and a folder icon, opens and closes when clicked, and nests
-// its children one indent in; a file shows a file icon and opens on a
-// click. The open state lives on the items' Open pointers, as the tree
-// component's does.
-func (a *app) fileTree(c *ui.Context, items []tree.Item, depth int) {
+// fileTree draws one level of the Files section's tree, the entries of
+// the folder whose row has the path parent. A directory shows a chevron
+// and a folder icon, opens and closes when clicked, and nests its children
+// one indent in; it is listed when it is first opened, and keeps its list
+// while the tree lives. A file shows a file icon and opens on a click. A
+// folder with more entries than it lists ends with a row that counts the
+// rest. The open state lives on the items' Open pointers, as the tree
+// component's does. Every level draws into one column, so a row's key is
+// its path under parent: a depth and an index would be shared by the
+// children of two open folders.
+func (a *app) fileTree(c *ui.Context, items []tree.Item, parent string, depth int) {
 	t := c.Theme()
-	for i, it := range items {
+	for i := range items {
+		it := &items[i] // the item itself: opening a folder gives it its children
 		dir := it.Open != nil
-		b := ui.ButtonBase(c.Key(fmt.Sprintf("file-%d-%d", depth, i))).
+		path := parent + "/" + it.Label
+		b := ui.ButtonBase(c.Key("file-"+path)).
 			FillWidth().Padding(4, 0, 4, 4+float32(depth)*12).Radius(t.Radius).FocusRing(false)
 		if b.Hovered() {
 			b.Background(t.SurfaceHover)
@@ -738,12 +881,26 @@ func (a *app) fileTree(c *ui.Context, items []tree.Item, depth int) {
 		if b.Clicked() {
 			if dir {
 				*it.Open = !*it.Open
+				if *it.Open && it.Children == nil {
+					var more int
+					it.Children, more = listFolder(filepath.Join(a.info.filesDir, path))
+					if a.info.filesMore == nil {
+						a.info.filesMore = map[string]int{}
+					}
+					a.info.filesMore[path] = more
+				}
 			} else if it.Action != nil {
 				it.Action()
 			}
 		}
 		if dir && *it.Open {
-			a.fileTree(c, it.Children, depth+1)
+			a.fileTree(c, it.Children, path, depth+1)
 		}
+	}
+	if more := a.info.filesMore[parent]; more > 0 {
+		// Where a label starts: past the row's padding, chevron and icon.
+		ui.Box(c).Padding(4, 0, 4, 4+float32(depth)*12+13+6+14+6).Children(func() {
+			ui.Text(c, fmt.Sprintf("… +%d", more)).SingleLine().FontSize(12).TextColor(t.TextMuted)
+		})
 	}
 }
