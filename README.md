@@ -25,8 +25,8 @@ The app draws its own UI with MyGo's native toolkit. It uses no webview.
   Zed), the running process, and the ports in use.
 - **Command palette.** Cmd+K opens it. It runs window actions, jumps to
   sessions, and picks a terminal theme.
-- **Ghostty themes.** The palette offers 28 curated palettes, or "Follow
-  system" to match the window's light or dark appearance.
+- **Ghostty themes.** The palette offers 25 themes, or "Follow system" to
+  match the window's light or dark appearance.
 - **Agent chat.** A panel on the right renders the chat as markdown. The
   built-in agent is a demo; `agent.go` defines the interface to wire a
   real model.
@@ -60,10 +60,12 @@ The tests run headless: they need no window. To render a preview image of
 the window (a visual check):
 
 ```sh
-NUTTY_SNAPSHOT=1 go test -run TestSnapshot
+NUTTY_SNAPSHOT=1 go test -run TestSnapshot ./internal/app/
 ```
 
-It writes `/tmp/nutty-preview.png` and `/tmp/nutty-preview-dark.png`.
+It writes `/tmp/nutty-preview.png` (the window with the chat panel),
+`/tmp/nutty-preview-info.png` (with the info panel) and
+`/tmp/nutty-preview-none.png` (with neither), and a `-dark` copy of each.
 
 ## Layout
 
@@ -80,9 +82,10 @@ it uses under `internal/`.
 | `internal/app/topbar.go` | The top bar: title and icon buttons |
 | `internal/app/rail.go` | The sessions rail |
 | `internal/app/info.go` | The info panel: directory, process, ports |
-| `internal/app/tabbar.go` | The rename dialog |
+| `internal/app/tabbar.go` | The tab bar, the rename dialog and the close confirmation |
 | `internal/app/palette.go` | The commands of the palette |
-| `internal/app/themes.go` | The curated Ghostty themes |
+| `internal/app/themes.go` | The window appearance: system, light or dark |
+| `internal/settings/themes.go` | The window colors and the list of terminal themes |
 | `internal/app/menus.go` | The application menu |
 | `internal/app/chat.go` | The agent chat panel |
 | `internal/app/agent.go` | The `Agent` interface and the demo agent |
