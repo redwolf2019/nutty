@@ -59,6 +59,7 @@ type node struct {
 type splitNode struct {
 	vertical bool
 	size     *float32
+	room     float32 // what the two panes shared in the last frame
 	a, b     *node
 }
 
@@ -67,6 +68,7 @@ type pane struct {
 	term   *terminal.Terminal
 	handle ui.Handle
 	dead   bool
+	w, h   float32 // the pane's size in the last frame, for a split to halve
 }
 
 // newTerminal is terminal.New, a seam for tests that must not start a
@@ -167,16 +169,35 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 func (a *app) renderNode(c *ui.Context, n *node) {
 	if n.split != nil {
 		sn := n.split
-		split.Split(c, split.Props{
+		// The divider keeps its place in DIPs and the split clamps it only
+		// while it is dragged, so a window made narrower, or a panel opened
+		// beside the panes, would push the second pane out of its room:
+		// keep the divider inside the room the split had.
+		if sn.room > 0 {
+			*sn.size = max(splitMinPane, min(*sn.size, sn.room-1-splitMinPane))
+		}
+		r := split.Split(c, split.Props{
 			Size:     sn.size,
 			Vertical: sn.vertical,
 			First:    func(c *ui.Context) { a.renderNode(c, sn.a) },
 			Second:   func(c *ui.Context) { a.renderNode(c, sn.b) },
-		}).Fill()
+		}).Fill().Bounds()
+		sn.room = r.W
+		if sn.vertical {
+			sn.room = r.H
+		}
 		return
 	}
 	a.renderPane(c, n.term)
+	// Remember the pane's size, which a split of it halves (see splitPane).
+	if r := c.Resolve(n.term.handle).Bounds(); r.W > 0 && r.H > 0 {
+		n.term.w, n.term.h = r.W, r.H
+	}
 }
+
+// splitMinPane is the least a split leaves either pane, as the divider of
+// the Split widget does when dragged.
+const splitMinPane = 40
 
 // renderPane draws one terminal, filling the pane with no ring around it —
 // otty draws none, and a ring around a terminal reads as a border.
@@ -216,7 +237,15 @@ func (a *app) splitPane(p *pane, vertical bool) {
 	}
 	np := &pane{}
 	np.term = a.newTerm(s, np)
+	// Half of the pane being split, not of the window: the window's half is
+	// wider than a pane that is already one side of a split, which left the
+	// new pane no room at all.
 	size := a.defaultSplitSize(vertical)
+	if vertical && p.h > 0 {
+		size = float32(int(p.h / 2))
+	} else if !vertical && p.w > 0 {
+		size = float32(int(p.w / 2))
+	}
 	split := &node{split: &splitNode{
 		vertical: vertical,
 		size:     &size,
