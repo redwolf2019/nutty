@@ -583,27 +583,42 @@ func (sw *settingsWindow) syncColors() {
 	}
 	// The theme's cursor and selection are zero in the window colors; the
 	// terminal falls back to the foreground for the cursor and an accent
-	// for the selection, so the wells show what would render.
+	// for the selection, so the wells show what would render. The text
+	// under the cursor falls back to the background the same way.
 	cursorDef := th.Cursor
 	if cursorDef.A == 0 {
 		cursorDef = th.Foreground
+	}
+	cursorTextDef := th.CursorText
+	if cursorTextDef.A == 0 {
+		cursorTextDef = th.Background
 	}
 	selDef := th.Selection
 	if selDef.A == 0 {
 		selDef = ui.Hex("#A8C7FA")
 	}
+	selTextDef := th.SelectionText
+	if selTextDef.A == 0 {
+		selTextDef = th.Foreground // selected text keeps its own colors
+	}
 	defColor := func(d settingDef) ui.Color {
 		switch d.key {
+		case "background":
+			return th.Background
 		case "cursor-color":
 			return cursorDef
+		case "cursor-text":
+			return cursorTextDef
 		case "selection-background":
 			return selDef
+		case "selection-foreground":
+			return selTextDef
 		}
 		var i int
 		if n, _ := fmt.Sscanf(d.key, "palette-%d", &i); n == 1 {
 			return th.Palette[i]
 		}
-		return th.Foreground // foreground, cursor text, selection text
+		return th.Foreground
 	}
 	sync := func(d settingDef, set func(string)) {
 		st := sw.wellState(d)
@@ -619,7 +634,11 @@ func (sw *settingsWindow) syncColors() {
 			st.base = st.color
 			return
 		}
-		if !st.inUse {
+		// An unused well follows the theme, so a change of theme refreshes
+		// it. It is refreshed only then: the picker writes its color into
+		// the well between frames, and resetting the well on every frame
+		// erased the pick before the comparison below could see it.
+		if !st.inUse && st.base != def {
 			st.base, st.color = def, def
 		}
 		if st.color != st.base {
