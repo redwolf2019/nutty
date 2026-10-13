@@ -4,8 +4,6 @@
 package app
 
 import (
-	"nutty/internal/settings"
-
 	"github.com/egoist/mygo"
 )
 
@@ -14,7 +12,7 @@ import (
 func Run() error {
 	mygo.App.WhenReady(func() {
 		registerFonts()
-		s := settings.Load()
+		s := sharedSettings()
 		setUILang(s.Language)
 		setAppMenu(s)
 		newWindow()
