@@ -361,29 +361,9 @@ func (s *Settings) UnmarshalJSON(b []byte) error {
 		}
 		delete(file, "CursorBlink")
 	}
-	// Overlay the file's keys on the current settings, then read the merged
-	// JSON into an alias (no methods), so this unmarshal does not recurse.
-	cur, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	merged := map[string]any{}
-	if err := json.Unmarshal(cur, &merged); err != nil {
-		return err
-	}
-	for k, v := range file {
-		merged[k] = v
-	}
-	out, err := json.Marshal(merged)
-	if err != nil {
-		return err
-	}
-	type alias Settings
-	var a alias
-	if err := json.Unmarshal(out, &a); err != nil {
-		return err
-	}
-	*s = Settings(a)
+	// Only a file that is no JSON object fails. A value that does not fit
+	// its field is left out, and the rest of the file is read (see overlay).
+	s.overlay(file)
 	return nil
 }
 
