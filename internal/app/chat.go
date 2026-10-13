@@ -17,6 +17,7 @@ type chatState struct {
 	msgs    []chatMsg
 	value   string
 	busy    bool
+	turn    int // counts the prompts sent; the reply of the last one owns busy
 	started time.Time
 	scroll  ui.ScrollState
 }
@@ -138,14 +139,20 @@ func (s *chatState) thinking() bool {
 	return len(s.msgs) == 0 || s.msgs[len(s.msgs)-1].text == ""
 }
 
-// chatSubmit sends the composer's text to the agent.
+// chatSubmit sends the composer's text to the agent. The composer submits
+// on Enter while a reply is still streaming too: that reply is cut short,
+// and each reply keeps writing to its own message.
 func (a *app) chatSubmit(text string) {
 	dir := ""
 	if s := a.currentSession(); s != nil {
 		dir = s.dir
 	}
+	a.agent.Stop()
 	a.chat.msgs = append(a.chat.msgs, chatMsg{user: true, text: text})
 	a.chat.msgs = append(a.chat.msgs, chatMsg{})
+	idx := len(a.chat.msgs) - 1
+	a.chat.turn++
+	turn := a.chat.turn
 	a.chat.busy = true
 	a.chat.started = time.Now()
 	a.chat.value = ""
@@ -153,27 +160,30 @@ func (a *app) chatSubmit(text string) {
 	a.agent.Reply(context.Background(), dir, text, out)
 	go func() {
 		for chunk := range out {
-			chunk := chunk
-			a.win.Update(func() {
-				if len(a.chat.msgs) == 0 {
-					return
-				}
-				last := &a.chat.msgs[len(a.chat.msgs)-1]
-				last.text += chunk
-				last.streaming = true
-				// Follow the end while the reader is already there.
-				if a.chat.scroll.Y >= a.chat.scroll.MaxY {
-					a.chat.scroll.Y = math.MaxFloat32
-				}
-			})
+			a.win.Update(func() { a.chatAppend(idx, chunk) })
 		}
-		a.win.Update(func() {
-			if len(a.chat.msgs) > 0 {
-				a.chat.msgs[len(a.chat.msgs)-1].streaming = false
-			}
-			a.chat.busy = false
-		})
+		a.win.Update(func() { a.chatFinish(idx, turn) })
 	}()
+}
+
+// chatAppend adds a chunk of a reply to the reply's message.
+func (a *app) chatAppend(idx int, chunk string) {
+	m := &a.chat.msgs[idx]
+	m.text += chunk
+	m.streaming = true
+	// Follow the end while the reader is already there.
+	if a.chat.scroll.Y >= a.chat.scroll.MaxY {
+		a.chat.scroll.Y = math.MaxFloat32
+	}
+}
+
+// chatFinish ends a reply. The panel stays busy when a later prompt's
+// reply is still coming.
+func (a *app) chatFinish(idx, turn int) {
+	a.chat.msgs[idx].streaming = false
+	if turn == a.chat.turn {
+		a.chat.busy = false
+	}
 }
 
 // chatStop cancels the reply in flight.
