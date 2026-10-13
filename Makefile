@@ -14,6 +14,10 @@
 
 .PHONY: run build fmt vet lint test snapshot icon package clean
 
+# A bare `make` builds, as the list above says; without this it would
+# take the first target below and launch the app.
+.DEFAULT_GOAL := build
+
 # GOLANGCI is the linter, wherever it lives: the GOPATH copy when the
 # PATH one is missing.
 GOLANGCI := $(shell command -v golangci-lint 2>/dev/null || echo $(shell go env GOPATH)/bin/golangci-lint)
