@@ -1,5 +1,7 @@
 # Nutty 🌰
 
+English | [简体中文](README.zh-CN.md)
+
 Nutty is a native terminal app for macOS. It is a clone of
 [otty.sh](https://otty.sh/), built in Go with
 [MyGo](https://github.com/egoist/mygo), the
