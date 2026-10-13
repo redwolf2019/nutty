@@ -6,6 +6,7 @@
 package main
 
 import (
+	"image"
 	"image/color"
 	"image/png"
 	"log"
@@ -14,31 +15,54 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
+// size is the icon's side in pixels: the largest size MyGo packages into
+// the app's .icns, so none of them is scaled up from a smaller render.
+const size = 1024
+
 func main() {
 	src, err := os.ReadFile("internal/app/assets/nutty.svg")
 	if err != nil {
 		log.Fatal(err)
 	}
+	img := render(src)
+	if err := os.MkdirAll("resources", 0o755); err != nil {
+		log.Fatal(err)
+	}
+	f, err := os.Create("resources/icon.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	if err := png.Encode(f, img); err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("wrote resources/icon.png %dx%d", size, size)
+}
+
+// render draws the icon from the mark's SVG. The tile is drawn square:
+// the mask below is what rounds its corners. Rounding it in the renderer
+// as well left white slivers in the icon, where the renderer's corner
+// curve and the mask's circle disagree.
+func render(src []byte) *image.RGBA {
 	svg := ui.MustParseSVG(src)
-	w, h := svg.Size()
-	tile := 0.84 * float32(w)
+	tile := float32(0.84 * size)
 	tt := ui.NewTester(func(c *ui.Context) {
 		ui.Column(c).Fill().Center().Children(func() {
-			ui.Box(c).Size(tile, tile).Radius(tile * 0.22).
+			ui.Box(c).Size(tile, tile).
 				Background(ui.Hex("#000000")).Clip().Children(func() {
 				ui.Column(c).Fill().Center().Children(func() {
 					ui.Image(c, svg).Size(tile, tile)
 				})
 			})
 		})
-	}, int(w), int(h))
+	}, size, size)
 	img := tt.Image()
 	// The headless renderer paints the theme's white background; drop
-	// everything outside the black tile, whose rounded corners it keeps.
-	// The logo's own white stays: it lies inside the tile.
+	// everything outside the tile and round its corners. The logo's own
+	// white stays: it lies inside the tile.
 	ts := int(tile)
 	r := int(float32(ts) * 0.22)
-	x0, y0 := (int(w)-ts)/2, (int(h)-ts)/2
+	x0, y0 := (size-ts)/2, (size-ts)/2
 	inTile := func(x, y int) bool {
 		if x < x0 || y < y0 || x >= x0+ts || y >= y0+ts {
 			return false
@@ -71,16 +95,5 @@ func main() {
 			}
 		}
 	}
-	if err := os.MkdirAll("resources", 0o755); err != nil {
-		log.Fatal(err)
-	}
-	f, err := os.Create("resources/icon.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() { _ = f.Close() }()
-	if err := png.Encode(f, img); err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("wrote resources/icon.png %dx%d", int(w), int(h))
+	return img
 }
