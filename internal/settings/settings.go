@@ -449,6 +449,7 @@ func (s *Settings) Normalize() {
 	if s.CursorBlinkStyle == "false" {
 		s.CursorBlinkStyle = "default_off"
 	}
+	s.validate()
 	if len(s.DetailsViews) == 0 {
 		s.DetailsViews = Default().DetailsViews
 	}
