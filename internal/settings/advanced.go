@@ -32,7 +32,14 @@ func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
 				_ = exec.Command("open", Path()).Start()
 			})
 			sw.advButton(c, "adv-reload-config", i18n.Tr("Reload"), func() {
-				*sw.s = *Load()
+				// A file that does not read, as one half edited by hand,
+				// leaves the settings as they are: taking the defaults for
+				// it would save them over the file in this same frame.
+				loaded, err := load()
+				if err != nil {
+					return
+				}
+				*sw.s = *loaded
 				sw.wells = colorWells{}
 				sw.lists = nil
 				sw.app.ApplySettings()

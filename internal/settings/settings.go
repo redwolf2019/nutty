@@ -323,14 +323,35 @@ func Path() string {
 }
 
 // Load reads the saved preferences, or the defaults when there is no file
-// yet. A file that does not parse is ignored.
+// yet. A file that is there but does not read gives the defaults too, and
+// is moved aside as settings.json.bad first: the next save writes the
+// settings file anew, and would otherwise replace what the user had, a
+// hand edit with a stray comma say, with those defaults.
 func Load() *Settings {
+	s, err := load()
+	if err != nil {
+		_ = os.Rename(Path(), Path()+".bad")
+		s = Default()
+		s.Normalize()
+	}
+	return s
+}
+
+// load reads the settings file: the defaults when there is none yet, and
+// an error when there is one that cannot be read or does not parse.
+func load() (*Settings, error) {
 	s := Default()
-	if b, err := os.ReadFile(Path()); err == nil {
-		_ = json.Unmarshal(b, s)
+	b, err := os.ReadFile(Path())
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	if err == nil {
+		if err := json.Unmarshal(b, s); err != nil {
+			return nil, err
+		}
 	}
 	s.Normalize()
-	return s
+	return s, nil
 }
 
 // UnmarshalJSON reads a settings file into the current settings, turning
