@@ -17,8 +17,8 @@ import (
 var lang atomic.Value
 
 // SetLang resolves the Language setting to a concrete language.
-// "system" follows the OS locale; mygo.App.Locale() panics before the
-// app is ready, so a crash during startup resolves to Chinese rather
+// "system" follows the OS locale; if reading it panics (mygo's calls
+// can, before the app is ready), the language resolves to Chinese rather
 // than hiding the home language.
 func SetLang(v string) {
 	switch v {
@@ -31,9 +31,21 @@ func SetLang(v string) {
 	}
 }
 
-func locale() string {
-	defer func() { _ = recover() }()
-	if strings.HasPrefix(mygo.App.Locale(), "zh") {
+// systemLocale reads the OS locale, e.g. "zh-Hans-CN". It is a variable
+// so the tests can resolve "system" without an app: mygo.App.Locale
+// waits for a main thread that never runs under a test.
+var systemLocale = func() string { return mygo.App.Locale() }
+
+// locale is the language of the OS locale. The result is named so the
+// recovered panic can set it: an unnamed one would come back empty,
+// which Tr reads as English.
+func locale() (l string) {
+	defer func() {
+		if recover() != nil {
+			l = "chinese"
+		}
+	}()
+	if strings.HasPrefix(systemLocale(), "zh") {
 		return "chinese"
 	}
 	return "english"

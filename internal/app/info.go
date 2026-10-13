@@ -691,7 +691,7 @@ func (a *app) infoFilesView(c *ui.Context) {
 		ui.Text(c, tr("Reading…")).TextColor(t.TextMuted)
 		return
 	}
-	a.infoSection(c, "Files", func() {
+	a.infoSection(c, tr("Files"), func() {
 		if len(a.info.files) == 0 {
 			ui.Text(c, tr("No files")).TextColor(t.TextMuted)
 			return
