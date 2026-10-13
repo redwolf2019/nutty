@@ -13,12 +13,7 @@ import (
 // so each window keeps its own sessions. Edit roles go to the focused
 // control, so a terminal gets its copy and paste.
 func setAppMenu(s *settings.Settings) {
-	acc := func(action string) string {
-		if t, ok := s.ActionTrigger(action); ok {
-			return settings.AcceleratorOf(t)
-		}
-		return ""
-	}
+	acc := func(action string) string { return menuAccel(s, action) }
 	menu := mygo.NewMenu([]*mygo.MenuItem{
 		{
 			Label: "Nutty",
@@ -44,7 +39,7 @@ func setAppMenu(s *settings.Settings) {
 				{Label: tr("Duplicate Tab"), Accelerator: acc("duplicate_tab"), Click: act(func(a *app) { a.duplicateTab() })},
 				mygo.Separator(),
 				{Label: tr("Close Tab"), Accelerator: acc("close_tab"), Click: act(func(a *app) { a.closeTab() })},
-				{Role: mygo.RoleClose},
+				{Role: mygo.RoleClose, Accelerator: acc("close_window")},
 				mygo.Separator(),
 				{Label: tr("Reveal in Finder"), Click: act(func(a *app) { a.revealInFinder() })},
 			},
@@ -94,13 +89,20 @@ func setAppMenu(s *settings.Settings) {
 				mygo.Separator(),
 				{Label: tr("Next Tab"), Accelerator: acc("next_tab"), Click: act(func(a *app) { a.nextTab() })},
 				{Label: tr("Previous Tab"), Accelerator: acc("previous_tab"), Click: act(func(a *app) { a.prevTab() })},
-				{Label: tr("Focus Next Pane"), Accelerator: acc("focus_pane_next"), Click: act(func(a *app) { a.focusNextPane() })},
-				{Label: tr("Focus Previous Pane"), Accelerator: acc("focus_pane_previous"), Click: act(func(a *app) { a.focusPrevPane() })},
+				{Label: tr("Focus Next Pane"), Accelerator: acc("focus_next_pane"), Click: act(func(a *app) { a.focusNextPane() })},
+				{Label: tr("Focus Previous Pane"), Accelerator: acc("focus_previous_pane"), Click: act(func(a *app) { a.focusPrevPane() })},
 			},
 		},
 		{Role: mygo.RoleHelp},
 	})
 	mygo.App.SetMenu(menu)
+}
+
+// menuAccel is the menu accelerator of an action: its recorded override,
+// else otty's default, or "" when nothing is bound to it.
+func menuAccel(s *settings.Settings, action string) string {
+	t, _ := s.ActionTrigger(action)
+	return settings.AcceleratorOf(t)
 }
 
 // ApplyKeybinds rebuilds the application menu, whose accelerators come
