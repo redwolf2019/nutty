@@ -52,7 +52,7 @@ icon:
 # Package builds a signed Nutty.app and a DMG under out/ with MyGo's
 # own build, as the release workflow does.
 package:
-	go run github.com/egoist/mygo/cmd/mygo@v0.4.2 build -platform darwin/universal -o out
+	go run github.com/egoist/mygo/cmd/mygo@v0.4.8 build -platform darwin/universal -o out
 
 clean:
 	rm -rf out dist
