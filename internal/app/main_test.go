@@ -115,6 +115,28 @@ func TestDemoAgent(t *testing.T) {
 	}
 }
 
+// TestMenuAccel checks that the menu takes otty's default shortcut for an
+// action with no recorded override, and the override when there is one.
+func TestMenuAccel(t *testing.T) {
+	s := settings.Default()
+	for action, want := range map[string]string{
+		"new_tab":             "CmdOrCtrl+T",
+		"close_tab":           "CmdOrCtrl+W",
+		"close_window":        "CmdOrCtrl+Shift+W",
+		"focus_next_pane":     "CmdOrCtrl+]",
+		"focus_previous_pane": "CmdOrCtrl+[",
+		"no_such_action":      "",
+	} {
+		if got := menuAccel(s, action); got != want {
+			t.Errorf("menuAccel(%q) = %q, want %q", action, got, want)
+		}
+	}
+	s.KeybindOverrides = map[string]string{"cmd+shift+y": "new_tab"}
+	if got := menuAccel(s, "new_tab"); got != "CmdOrCtrl+Shift+Y" {
+		t.Errorf("overridden new_tab = %q, want CmdOrCtrl+Shift+Y", got)
+	}
+}
+
 func TestPaletteItems(t *testing.T) {
 	a := testApp()
 	s := a.newSession("")
