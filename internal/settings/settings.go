@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/egoist/mygo/ui"
@@ -402,6 +403,19 @@ func LoadFrom(b []byte) *Settings {
 // defaults that predate a field, and maps the booleans older builds saved
 // for the settings that are enums now.
 func (s *Settings) Normalize() {
+	// ui.Hex panics on a color it cannot parse, and the terminals' theme is
+	// built from these at launch: a color that is not hex goes back to the
+	// theme's.
+	colors := []*string{&s.Foreground, &s.Background, &s.CursorColor,
+		&s.CursorText, &s.Selection, &s.SelectionText}
+	for i := range s.Palette {
+		colors = append(colors, &s.Palette[i])
+	}
+	for _, c := range colors {
+		if !validHex(*c) {
+			*c = ""
+		}
+	}
 	if s.FontLigatures == "" && s.FontFamily != "" {
 		s.FontLigatures = "dlig"
 	}
@@ -451,6 +465,18 @@ func (s *Settings) AnyPalette() bool {
 		if c != "" {
 			return true
 		}
+	}
+	return false
+}
+
+// validHex reports whether c is a color ui.Hex parses: 3, 4, 6 or 8 hex
+// digits after an optional "#".
+func validHex(c string) bool {
+	h := strings.TrimPrefix(strings.TrimSpace(c), "#")
+	switch len(h) {
+	case 3, 4, 6, 8:
+		_, err := strconv.ParseUint(h, 16, 32)
+		return err == nil
 	}
 	return false
 }
