@@ -149,10 +149,7 @@ func (a *app) newTerm(s *session, p *pane) *terminal.Terminal {
 		},
 		OnExit: func(code int) {
 			a.win.Update(func() {
-				p.dead = true
-				if sessionAllDead(s) {
-					a.closeSession(s)
-				}
+				a.paneExited(p)
 			})
 		},
 		OpenLink: a.openLink,
@@ -311,6 +308,16 @@ func (s *session) replaceChild(p *pane, fn func(*node) *node) bool {
 	return rec(s.root)
 }
 
+// paneExited closes the pane whose shell ended, as typing exit in a
+// terminal closes it: its split collapses to the sibling, and the tab
+// closes with its last pane. A pane left in the tree showed "[Process
+// exited]" for as long as the tab lived, with no command to close it, and
+// stopped the focus from cycling past it.
+func (a *app) paneExited(p *pane) {
+	p.dead = true
+	a.closePane(p)
+}
+
 // closePane closes p, collapsing its split to the sibling, or closing the
 // whole session when it is the last pane.
 func (a *app) closePane(p *pane) {
@@ -330,7 +337,9 @@ func (a *app) closePane(p *pane) {
 		_ = p.term.Close()
 	}
 	if a.activePane == p {
-		a.activePane = s.panes[0]
+		// The focus was in the pane that went: give it to the one taking
+		// its place, or nothing typed reaches a shell until a click.
+		a.focusPane(s.panes[0])
 	}
 }
 
@@ -373,19 +382,6 @@ func collectPanes(n *node) []*pane {
 		return []*pane{n.term}
 	}
 	return append(collectPanes(n.split.a), collectPanes(n.split.b)...)
-}
-
-// sessionAllDead reports whether every pane of the session has exited.
-func sessionAllDead(s *session) bool {
-	if s == nil {
-		return true
-	}
-	for _, p := range s.panes {
-		if !p.dead {
-			return false
-		}
-	}
-	return true
 }
 
 // openLink opens a file path the terminal printed, reporting whether it
