@@ -36,6 +36,8 @@ func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
 				sw.wells = colorWells{}
 				sw.lists = nil
 				sw.app.ApplySettings()
+				// The file may bind other keys: the menu shows them.
+				sw.app.ApplyKeybinds()
 			})
 		})
 	})
@@ -69,6 +71,8 @@ func (sw *settingsWindow) pageAdvanced(c *ui.Context) {
 						sw.lists = nil
 						sw.app.ApplySettings()
 						sw.app.SaveSettings()
+						// The file may bind other keys: the menu shows them.
+						sw.app.ApplyKeybinds()
 					}
 				}
 			})
@@ -143,19 +147,21 @@ func (sw *settingsWindow) allSettingsList(c *ui.Context) {
 func (sw *settingsWindow) renderExtra(c *ui.Context, x extraDef) {
 	t := c.Theme()
 	key := "extra:" + x.key
+	// A key has no field to bind, so the switch, the number and the text
+	// edit a local of this frame. Their Changed applies the input to the
+	// local now; without the query it lands after the frame, in a variable
+	// nothing reads again, and the edit is lost.
 	switch x.kind {
 	case "bool":
 		on := extraBool(sw.s, x.key)
-		uixswitch.Switch(c, uixswitch.Props{On: &on, Label: x.key})
-		if on != extraBool(sw.s, x.key) {
-			sw.s.Extra[x.key] = on
-		}
+		uixswitch.Switch(c, uixswitch.Props{On: &on, Label: x.key, Changed: func(v bool) {
+			sw.setExtra(x.key, v)
+		}})
 	case "number":
 		field.Field(c, field.Props{Label: x.key}, func() {
 			v := extraFloat(sw.s, x.key)
-			numberinput.NumberInput(c, numberinput.Props{Value: &v, Lo: -1e12, Hi: 1e12, Step: 1})
-			if v != extraFloat(sw.s, x.key) {
-				sw.s.Extra[x.key] = v
+			if numberinput.NumberInput(c, numberinput.Props{Value: &v, Lo: -1e12, Hi: 1e12, Step: 1}).Changed() {
+				sw.setExtra(x.key, v)
 			}
 		})
 	case "color":
@@ -184,12 +190,20 @@ func (sw *settingsWindow) renderExtra(c *ui.Context, x extraDef) {
 	default: // string
 		field.Field(c, field.Props{Label: x.key}, func() {
 			v := extraString(sw.s, x.key)
-			input.Input(c, input.Props{Value: &v})
-			if v != extraString(sw.s, x.key) {
-				sw.s.Extra[x.key] = v
+			if input.Input(c, input.Props{Value: &v}).Changed() {
+				sw.setExtra(x.key, v)
 			}
 		})
 	}
+}
+
+// setExtra stores the value of a key that has no field. The map is nil
+// until the first key is set, on a fresh install and after a reset.
+func (sw *settingsWindow) setExtra(key string, v any) {
+	if sw.s.Extra == nil {
+		sw.s.Extra = map[string]any{}
+	}
+	sw.s.Extra[key] = v
 }
 
 func extraBool(s *Settings, key string) bool {
@@ -242,7 +256,7 @@ func (sw *settingsWindow) extraListEditor(c *ui.Context, bufKey, key string) {
 	}
 	textarea.Textarea(c, textarea.Props{Value: b, Rows: 3})
 	if joined := strings.Join(cur, "\n"); *b != joined {
-		sw.s.Extra[key] = splitLines(*b)
+		sw.setExtra(key, splitLines(*b))
 	}
 }
 
