@@ -56,6 +56,7 @@ func TestSnapshot(t *testing.T) {
 	// The app resolves its language at startup; the test builds a window
 	// directly, so resolve it the same way main does.
 	setUILang(settings.Default().Language)
+	t.Cleanup(func() { setUILang("english") }) // TestSiteShots renders in English
 	lt, dt := settings.OttyTermTheme(false), settings.OttyTermTheme(true)
 	term, err := terminal.New(terminal.Options{
 		Conn:      &scriptConn{data: []byte(previewScript), hold: true},
