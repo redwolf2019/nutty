@@ -648,40 +648,65 @@ const (
 	fileTreeMaxDepth = 8
 )
 
-// buildFileTree builds the uix tree items of dir, depth levels deep. The
-// count caps the total nodes, so a deep tree ends with an elided level
-// rather than a slow walk.
+// buildFileTree builds the uix tree items of dir, down to fileTreeMaxDepth
+// levels from depth. The count caps the total nodes, and the walk goes
+// level by level, so the budget is spent on the top of the tree first:
+// when it runs out, the folders further down list nothing, but no entry
+// of a level above is left out for the contents of one big folder.
 func buildFileTree(dir string, depth int, nodes *int) []tree.Item {
-	if depth >= fileTreeMaxDepth || *nodes >= fileTreeMaxNodes {
-		return nil
+	// A pending folder is one whose entries the next level lists, into the
+	// Children of its item.
+	type pending struct {
+		dir  string
+		into *[]tree.Item
 	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
+	var root []tree.Item
+	level := []pending{{dir, &root}}
+	for ; depth < fileTreeMaxDepth && len(level) > 0; depth++ {
+		var next []pending
+		for _, p := range level {
+			if *nodes >= fileTreeMaxNodes {
+				return root
+			}
+			entries, err := os.ReadDir(p.dir)
+			if err != nil {
+				continue
+			}
+			var items []tree.Item
+			for _, e := range entries {
+				name := e.Name()
+				if name == ".DS_Store" || (e.IsDir() && strings.HasPrefix(name, ".")) {
+					continue
+				}
+				if *nodes >= fileTreeMaxNodes {
+					break
+				}
+				*nodes++
+				it := tree.Item{Label: name}
+				path := filepath.Join(p.dir, name)
+				if e.IsDir() {
+					open := false
+					it.Open = &open
+					// Wait for open in the background: a child that is never
+					// waited for stays a zombie until the app quits.
+					it.Action = func() { go func() { _ = exec.Command("open", path).Run() }() }
+				} else {
+					it.Action = func() { openZed(path) }
+				}
+				items = append(items, it)
+			}
+			*p.into = items
+			// The folder's items are all in place now, so their Children can
+			// be pointed at for the next level.
+			for i := range items {
+				if items[i].Open != nil {
+					next = append(next, pending{filepath.Join(p.dir, items[i].Label), &items[i].Children})
+				}
+			}
+		}
+		level = next
 	}
-	var items []tree.Item
-	for _, e := range entries {
-		name := e.Name()
-		if name == ".DS_Store" || (e.IsDir() && strings.HasPrefix(name, ".")) {
-			continue
-		}
-		if *nodes >= fileTreeMaxNodes {
-			break
-		}
-		*nodes++
-		it := tree.Item{Label: name}
-		path := filepath.Join(dir, name)
-		if e.IsDir() {
-			open := false
-			it.Open = &open
-			it.Children = buildFileTree(path, depth+1, nodes)
-			it.Action = func() { _ = exec.Command("open", path).Start() }
-		} else {
-			it.Action = func() { openZed(path) }
-		}
-		items = append(items, it)
-	}
-	return items
+	return root
 }
 
 // infoFilesView is the Files section: the working directory as a tree,
