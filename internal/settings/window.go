@@ -320,10 +320,12 @@ func (sw *settingsWindow) control(c *ui.Context, d settingDef) {
 		show := enumLabel(d, cur)
 		labels := make([]string, len(d.enum))
 		for i, o := range d.enum {
-			labels[i] = o.label
+			labels[i] = i18n.Tr(o.label)
 		}
-		uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels})
-		if show != enumLabel(d, cur) {
+		// show is this frame's local: Changed applies the choice to it now.
+		// Without the query the choice lands after the frame, in a variable
+		// nothing reads again.
+		if uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels}).Changed() {
 			d.set(sw.s, enumValue(d, show))
 		}
 	case "number":
@@ -356,12 +358,10 @@ func (sw *settingsWindow) renderSetting(c *ui.Context, d settingDef) {
 		field.Field(c, field.Props{Label: i18n.Tr(d.label), Hint: i18n.Tr(d.desc)}, func() {
 			labels := make([]string, len(d.enum))
 			for i, o := range d.enum {
-				labels[i] = o.label
+				labels[i] = i18n.Tr(o.label)
 			}
-			cur := d.get(sw.s).(string)
-			show := enumLabel(d, cur)
-			uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels})
-			if show != enumLabel(d, cur) {
+			show := enumLabel(d, d.get(sw.s).(string))
+			if uixselect.Select(c, uixselect.Props{Selected: &show, Options: labels}).Changed() {
 				d.set(sw.s, enumValue(d, show))
 			}
 		})

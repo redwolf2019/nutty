@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"nutty/internal/i18n"
+
 	"github.com/egoist/mygo/ui"
 	uixsettings "github.com/smallnest/uix/components/settings"
 )
@@ -329,6 +331,35 @@ func TestSettingsLanguageToggle(t *testing.T) {
 	}
 	if en.HasText("关闭窗口") {
 		t.Error("english page still shows Chinese 关闭窗口")
+	}
+}
+
+// TestSettingsSelectChooses checks that picking an option of an enum's
+// select changes the setting, and that the options are listed in the
+// interface language, as the closed select shows its value.
+func TestSettingsSelectChooses(t *testing.T) {
+	t.Cleanup(func() { i18n.SetLang("english") })
+	for lang, pick := range map[string][2]string{
+		"english": {"Running Process", "Never"},
+		"chinese": {"有进程运行时", "从不提示"},
+	} {
+		s := Default()
+		s.Language = lang
+		sw := &settingsWindow{app: mockApp{}, s: s, last: *s,
+			state: uixsettings.SettingsState{Category: "general"}}
+		tt := ui.NewTester(sw.view, 900, 1600)
+		tt.Frame()
+		if err := tt.Click(pick[0]); err != nil {
+			t.Fatalf("%s: open the Closing Tab select: %v", lang, err)
+		}
+		tt.Frame()
+		if err := tt.Click(pick[1]); err != nil {
+			t.Fatalf("%s: the list lacks %q: %v", lang, pick[1], err)
+		}
+		tt.Frame()
+		if s.ConfirmCloseTab != "never" {
+			t.Errorf("%s: ConfirmCloseTab = %q, want never", lang, s.ConfirmCloseTab)
+		}
 	}
 }
 
