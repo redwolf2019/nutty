@@ -419,11 +419,14 @@ func (s *Settings) Normalize() {
 			s.OptionAsAlt = "false"
 		}
 	}
-	if s.ConfirmCloseTab == "true" {
-		s.ConfirmCloseTab = "process"
-	}
-	if s.ConfirmCloseTab == "false" {
-		s.ConfirmCloseTab = "never"
+	// The three closing settings were booleans alike: ask, or do not.
+	for _, confirm := range []*string{&s.ConfirmCloseTab, &s.ConfirmCloseWindow, &s.ConfirmClosePane} {
+		switch *confirm {
+		case "true":
+			*confirm = "process"
+		case "false":
+			*confirm = "never"
+		}
 	}
 	if s.CursorBlinkStyle == "" {
 		s.CursorBlinkStyle = "default_off"
