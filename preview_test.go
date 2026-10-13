@@ -47,6 +47,9 @@ func TestSnapshot(t *testing.T) {
 		t.Skip("set NUTTY_SNAPSHOT=1 to render the preview")
 	}
 	registerFonts()
+	// The app resolves its language at startup; the test builds a window
+	// directly, so resolve it the same way main does.
+	setUILang(settings.Default().Language)
 	lt, dt := settings.OttyTermTheme(false), settings.OttyTermTheme(true)
 	term, err := terminal.New(terminal.Options{
 		Conn:      &scriptConn{data: []byte(previewScript)},

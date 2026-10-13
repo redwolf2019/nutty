@@ -197,7 +197,7 @@ func (a *app) infoSection(c *ui.Context, title string, fn func()) {
 func (a *app) infoDirectory(c *ui.Context) {
 	t := c.Theme()
 	s := a.currentSession()
-	a.infoSection(c, "Working Directory", func() {
+	a.infoSection(c, tr("Working Directory"), func() {
 		if s == nil {
 			ui.Text(c, "—").TextColor(t.TextMuted)
 			return
@@ -205,13 +205,13 @@ func (a *app) infoDirectory(c *ui.Context) {
 		ui.Column(c).FillWidth().Gap(12).Children(func() {
 			ui.Text(c, homeShown(s.dir)).SingleLine().FontSize(12).TextColor(t.Text)
 			ui.Column(c).FillWidth().Gap(4).Children(func() {
-				a.infoAction(c, "Copy Path", lucide.Copy(), func() {
+				a.infoAction(c, tr("Copy Path"), lucide.Copy(), func() {
 					mygo.Clipboard.WriteText(s.dir)
 				})
-				a.infoAction(c, "Reveal in Finder", lucide.FolderOpen(), func() {
+				a.infoAction(c, tr("Reveal in Finder"), lucide.FolderOpen(), func() {
 					exec.Command("open", s.dir).Start()
 				})
-				a.infoAction(c, "Open in Zed", lucide.ArrowUpRight(), func() {
+				a.infoAction(c, tr("Open in Zed"), lucide.ArrowUpRight(), func() {
 					openZed(s.dir)
 				})
 			})
@@ -221,22 +221,22 @@ func (a *app) infoDirectory(c *ui.Context) {
 
 func (a *app) infoProcess(c *ui.Context) {
 	t := c.Theme()
-	a.infoSection(c, "Process", func() {
+	a.infoSection(c, tr("Process"), func() {
 		// Otty lists the children of the session's shell here. MyGo's
 		// terminal plugin exposes no child process, so show the idle
 		// state, as otty does when nothing runs.
-		ui.Text(c, "No child processes").FontSize(11).TextColor(t.TextMuted)
+		ui.Text(c, tr("No child processes")).FontSize(11).TextColor(t.TextMuted)
 	})
 }
 
 func (a *app) infoPorts(c *ui.Context) {
 	t := c.Theme()
-	a.infoSection(c, "Ports", func() {
+	a.infoSection(c, tr("Ports"), func() {
 		switch {
 		case !a.info.portsDone:
-			ui.Text(c, "Scanning…").TextColor(t.TextMuted)
+			ui.Text(c, tr("Scanning…")).TextColor(t.TextMuted)
 		case len(a.info.ports) == 0:
-			ui.Text(c, "No listening ports").TextColor(t.TextMuted)
+			ui.Text(c, tr("No listening ports")).TextColor(t.TextMuted)
 		default:
 			ui.Column(c).FillWidth().Gap(4).Children(func() {
 				for _, p := range a.info.ports {
@@ -375,12 +375,12 @@ func (a *app) loadOutline() {
 func (a *app) infoOutlineView(c *ui.Context) {
 	t := c.Theme()
 	if !a.info.outlineDone {
-		ui.Text(c, "Reading…").TextColor(t.TextMuted)
+		ui.Text(c, tr("Reading…")).TextColor(t.TextMuted)
 		return
 	}
-	a.infoSection(c, "Command Marks", func() {
+	a.infoSection(c, tr("Command Marks"), func() {
 		if len(a.info.outline) == 0 {
-			ui.Text(c, "No commands yet").TextColor(t.TextMuted)
+			ui.Text(c, tr("No commands yet")).TextColor(t.TextMuted)
 			return
 		}
 		ui.Column(c).FillWidth().Gap(4).Children(func() {
@@ -497,19 +497,19 @@ func (a *app) loadGitDiff(path string, staged bool) {
 func (a *app) infoGitView(c *ui.Context) {
 	t := c.Theme()
 	if !a.info.git.done {
-		ui.Text(c, "Reading…").TextColor(t.TextMuted)
+		ui.Text(c, tr("Reading…")).TextColor(t.TextMuted)
 		return
 	}
-	a.infoSection(c, "Repository", func() {
+	a.infoSection(c, tr("Repository"), func() {
 		if a.info.git.branch == "" {
-			ui.Text(c, "Not a repository").TextColor(t.TextMuted)
+			ui.Text(c, tr("Not a repository")).TextColor(t.TextMuted)
 			return
 		}
 		ui.Text(c, a.info.git.branch).FontSize(12).TextColor(t.Text)
 	})
-	a.infoSection(c, "Changes", func() {
+	a.infoSection(c, tr("Changes"), func() {
 		if len(a.info.git.changes) == 0 {
-			ui.Text(c, "No changes").TextColor(t.TextMuted)
+			ui.Text(c, tr("No changes")).TextColor(t.TextMuted)
 			return
 		}
 		ui.Column(c).FillWidth().Gap(4).Children(func() {
@@ -541,7 +541,7 @@ func (a *app) gitChangeRow(c *ui.Context, ch gitChange) {
 		} else if ch.status == "??" {
 			// An untracked file has no committed diff to show.
 			a.info.git.diffOpen = ch.path
-			a.info.git.diffLines = []string{"untracked — no diff yet"}
+			a.info.git.diffLines = []string{tr("untracked — no diff yet")}
 		} else if len(ch.status) > 0 && ch.status[0] != ' ' && ch.status[0] != '?' {
 			a.loadGitDiff(ch.path, true)
 		} else {
@@ -551,7 +551,7 @@ func (a *app) gitChangeRow(c *ui.Context, ch gitChange) {
 	if open {
 		ui.Column(c).FillWidth().Gap(2).Padding(0, 6, 0, 0).Children(func() {
 			if a.info.git.diffLines == nil {
-				ui.Text(c, "Reading…").FontSize(11).TextColor(t.TextMuted)
+				ui.Text(c, tr("Reading…")).FontSize(11).TextColor(t.TextMuted)
 			}
 			for _, line := range a.info.git.diffLines {
 				ui.Text(c, line).FontSize(11).TextColor(diffColor(t, line))
@@ -688,12 +688,12 @@ func buildFileTree(dir string, depth int, nodes *int) []tree.Item {
 func (a *app) infoFilesView(c *ui.Context) {
 	t := c.Theme()
 	if !a.info.filesDone {
-		ui.Text(c, "Reading…").TextColor(t.TextMuted)
+		ui.Text(c, tr("Reading…")).TextColor(t.TextMuted)
 		return
 	}
 	a.infoSection(c, "Files", func() {
 		if len(a.info.files) == 0 {
-			ui.Text(c, "No files").TextColor(t.TextMuted)
+			ui.Text(c, tr("No files")).TextColor(t.TextMuted)
 			return
 		}
 		a.fileTree(c, a.info.files, 0)

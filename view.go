@@ -115,8 +115,8 @@ func (a *app) contentView(c *ui.Context) {
 	if len(a.sessions) == 0 {
 		ui.Column(c).Fill().Center().Gap(12).Children(func() {
 			nutTile(c, 88)
-			ui.Text(c, "No sessions").TextColor(t.TextMuted)
-			ui.Text(c, "Press ⌘T to open a new session").TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, tr("No sessions")).TextColor(t.TextMuted)
+			ui.Text(c, tr("Press ⌘T to open a new session")).TextColor(t.TextMuted).FontSize(12)
 		})
 		return
 	}

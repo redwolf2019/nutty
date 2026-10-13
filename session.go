@@ -178,8 +178,8 @@ func (a *app) renderPane(c *ui.Context, p *pane) {
 		if p.term == nil {
 			t := c.Theme()
 			ui.Column(c).Fill().Center().Gap(8).Children(func() {
-				ui.Text(c, "Terminal unavailable").TextColor(t.TextMuted)
-				ui.Text(c, "the terminal library could not be loaded").TextColor(t.TextMuted).FontSize(11)
+				ui.Text(c, tr("Terminal unavailable")).TextColor(t.TextMuted)
+				ui.Text(c, tr("the terminal library could not be loaded")).TextColor(t.TextMuted).FontSize(11)
 			})
 			return
 		}

@@ -5,6 +5,7 @@
 package i18n
 
 import (
+	"sort"
 	"strings"
 	"sync/atomic"
 
@@ -61,6 +62,19 @@ func Seen() map[string]int {
 	return out
 }
 
+// Untranslated is the strings Tr saw while recording that still lack a
+// translation, sorted. The sweep tests drive the table to empty with it.
+func Untranslated() []string {
+	out := []string{}
+	for s := range seen {
+		if _, ok := table[s]; !ok {
+			out = append(out, s)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 // Tr returns s in the interface language, unchanged when a translation
 // is missing. Only display strings call it.
 func Tr(s string) string {
@@ -76,10 +90,5 @@ func Tr(s string) string {
 	return s
 }
 
-// table is the hand-written Chinese translation table, keyed by the
-// English display string. Wording follows otty's own Chinese UI where
-// the term exists there (新建标签页, 跟随系统, 恢复默认设置 …).
-var table = map[string]string{
-	// Brand and window chrome.
-	"Settings…": "设置…",
-}
+// table is the hand-written Chinese translation table in zh.go, keyed by
+// the English display string. The sweep tests drive it to empty.

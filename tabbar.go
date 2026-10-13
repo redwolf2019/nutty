@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/egoist/mygo/ui"
 )
 
@@ -94,15 +96,15 @@ func (a *app) renameDialog(c *ui.Context) {
 			Shadow(0, 10, 30, 0, ui.RGBA(0, 0, 0, 0.3))
 		wp.Children(func() {
 			ui.Column(c).Padding(16).Gap(12).Children(func() {
-				ui.Text(c, "Rename Tab").Bold()
+				ui.Text(c, tr("Rename Tab")).Bold()
 				in := ui.TextInput(c.Key("rename"), &a.rename.buf).
 					Bind(&a.rename.input).AutoFocus()
 				if in.Submitted() {
 					a.commitRename()
 				}
 				ui.Row(c).FillWidth().Justify(ui.End).Gap(8).Children(func() {
-					ui.Button(c, "Cancel").FocusRing(false)
-					if ui.PrimaryButton(c, "Rename").Clicked() {
+					ui.Button(c, tr("Cancel")).FocusRing(false)
+					if ui.PrimaryButton(c, tr("Rename")).Clicked() {
 						a.commitRename()
 					}
 				})
@@ -126,14 +128,14 @@ func (a *app) confirmDialog(c *ui.Context) {
 			Shadow(0, 10, 30, 0, ui.RGBA(0, 0, 0, 0.3))
 		wp.Children(func() {
 			ui.Column(c).Padding(16).Gap(12).Children(func() {
-				ui.Text(c, "Close Tab?").Bold()
-				ui.Text(c, "“"+a.pendingClose.displayTitle()+"” and its processes will end.").
+				ui.Text(c, tr("Close Tab?")).Bold()
+				ui.Text(c, fmt.Sprintf(tr("“%s” and its processes will end."), a.pendingClose.displayTitle())).
 					FontSize(12).TextColor(t.TextMuted)
 				ui.Row(c).FillWidth().Justify(ui.End).Gap(8).Children(func() {
-					if ui.Button(c, "Cancel").Clicked() {
+					if ui.Button(c, tr("Cancel")).Clicked() {
 						a.pendingClose = nil
 					}
-					if ui.PrimaryButton(c, "Close Tab").Clicked() {
+					if ui.PrimaryButton(c, tr("Close Tab")).Clicked() {
 						s := a.pendingClose
 						a.pendingClose = nil
 						a.closeSession(s)

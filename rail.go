@@ -20,10 +20,10 @@ func (a *app) railView(c *ui.Context) {
 			// command palette, as otty draws them. Hiding the rail is the
 			// strip's left pair, next to the new-tab button.
 			ui.Row(c).FillWidth().Padding(0, 9, 0, 18).Gap(6).Children(func() {
-				ui.Text(c, "TABS").Bold().FontSize(11).TextColor(faint(t)).
+				ui.Text(c, tr("TABS")).Bold().FontSize(11).TextColor(faint(t)).
 					LetterSpacing(1).Grow(1)
 				ib := ui.ButtonBase(c.Key("tabs-menu")).Padding(0).
-					Radius(t.Radius).FocusRing(false).Tooltip("Tabs menu")
+					Radius(t.Radius).FocusRing(false).Tooltip(tr("Tabs menu"))
 				ib.Children(func() {
 					ui.Image(c, lucide.ListFilter()).Size(15, 15)
 				})

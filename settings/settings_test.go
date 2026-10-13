@@ -266,6 +266,7 @@ func TestProfile(t *testing.T) {
 // window, so each one is drawn in a viewport tall enough for its content.
 func TestSettingsPagesRender(t *testing.T) {
 	s := Default()
+	s.Language = "english" // the page renders in the setting's language
 	s.Profiles = []Profile{{Name: "Web", Command: "docker compose up"}}
 	want := map[string][]string{
 		"appearance":   {"Theme", "Font Family", "Cursor Style", "Palette"},
@@ -301,6 +302,36 @@ func TestSettingsPagesRender(t *testing.T) {
 	}
 }
 
+// TestSettingsLanguageToggle checks that flipping the Language setting
+// redraws the same page in the other language, the way the live window
+// does when the select changes. The view resolves the interface
+// language from the setting on every frame.
+func TestSettingsLanguageToggle(t *testing.T) {
+	render := func(lang string) *ui.Tester {
+		s := Default()
+		s.Language = lang
+		sw := &settingsWindow{app: mockApp{}, s: s, last: *s,
+			state: uixsettings.SettingsState{Category: "general"}}
+		tt := ui.NewTester(sw.view, 760, 800)
+		tt.Frame()
+		return tt
+	}
+	ch := render("chinese")
+	if !ch.HasText("关闭窗口") {
+		t.Error("chinese page lacks 关闭窗口")
+	}
+	if ch.HasText("Closing Window") {
+		t.Error("chinese page still shows English Closing Window")
+	}
+	en := render("english")
+	if !en.HasText("Closing Window") {
+		t.Error("english page lacks Closing Window")
+	}
+	if en.HasText("关闭窗口") {
+		t.Error("english page still shows Chinese 关闭窗口")
+	}
+}
+
 // TestSettingsCategoryIcons checks that every settings category has an
 // icon and that the otty paths parse, so a bad extraction or a mygo SVG
 // limitation shows as a test failure, not a blank row.
@@ -322,6 +353,7 @@ func TestSettingsCategoryIcons(t *testing.T) {
 // causes is the same in every frame compared here, so only the puff shows.
 func TestDataBreath(t *testing.T) {
 	s := Default()
+	s.Language = "english" // the rows are found by their English labels
 	sw := &settingsWindow{app: mockApp{}, s: s, last: *s,
 		state: uixsettings.SettingsState{Category: "appearance"}}
 	tt := ui.NewTester(sw.view, 760, 800)

@@ -46,7 +46,7 @@ func (a *app) topstrip(c *ui.Context) {
 				left.Children(func() {
 					ui.Row(c).FillHeight().Height(a.stripBar(c)).Gap(2).Children(func() {
 						ui.Box(c).Width(bar.Left + 6)
-						a.stripButton(c, "strip-rail-open", lucide.PanelLeft(), 12, "Show sidebar", func() {
+						a.stripButton(c, "strip-rail-open", lucide.PanelLeft(), 12, tr("Show sidebar"), func() {
 							a.toggleSidebar()
 						})
 					})
@@ -98,11 +98,11 @@ func (a *app) stripControls(c *ui.Context) {
 		box.Children(func() {
 			ui.Row(c).FillHeight().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
 				ui.Box(c).Grow(1)
-				a.stripButton(c, "tabbar-toggle", lucide.PanelLeft(), 12, "Toggle tabs", func() {
+				a.stripButton(c, "tabbar-toggle", lucide.PanelLeft(), 12, tr("Toggle tabs"), func() {
 					a.toggleSidebar()
 				})
 				if a.panel == panelNone {
-					a.stripButton(c, "strip-panel", lucide.PanelRight(), 12, "Info panel", func() {
+					a.stripButton(c, "strip-panel", lucide.PanelRight(), 12, tr("Info panel"), func() {
 						a.toggleInfo()
 					})
 				}
@@ -124,7 +124,7 @@ func (a *app) sidebarStripToggles(c *ui.Context) {
 		box.Children(func() {
 			ui.Row(c).FillHeight().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
 				ui.Box(c).Grow(1)
-				a.stripButton(c, "strip-panel", lucide.PanelRight(), 12, "Info panel", func() {
+				a.stripButton(c, "strip-panel", lucide.PanelRight(), 12, tr("Info panel"), func() {
 					a.toggleInfo()
 				})
 			})
@@ -139,10 +139,10 @@ func (a *app) sidebarStripToggles(c *ui.Context) {
 func (a *app) railStripToggles(c *ui.Context) {
 	ui.Row(c).FillHeight().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
 		ui.Box(c).Grow(1)
-		a.stripButton(c, "strip-newtab", lucide.Plus(), 11, "New tab", func() {
+		a.stripButton(c, "strip-newtab", lucide.Plus(), 11, tr("New tab"), func() {
 			a.newTab()
 		})
-		a.stripButton(c, "strip-rail", lucide.PanelLeft(), 12, "Toggle sidebar", func() {
+		a.stripButton(c, "strip-rail", lucide.PanelLeft(), 12, tr("Toggle sidebar"), func() {
 			a.toggleSidebar()
 		})
 	})
@@ -199,7 +199,7 @@ func (a *app) infoToolbar(c *ui.Context) {
 // panel's full-height column.
 func (a *app) infoToolbarRow(c *ui.Context) {
 	ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 12).Gap(2).Children(func() {
-		a.infoTabButton(c, "toolbar-info", lucide.Info(), "Info", infoTabInfo, func() {
+		a.infoTabButton(c, "toolbar-info", lucide.Info(), tr("Info"), infoTabInfo, func() {
 			if a.info.tab == infoTabInfo {
 				a.toggleInfo()
 			} else {
@@ -209,16 +209,16 @@ func (a *app) infoToolbarRow(c *ui.Context) {
 		// The sections the View page's Details Panel settings hide
 		// do not draw their button, as otty drops them.
 		if a.detailsViewEnabled("outline") {
-			a.infoTabButton(c, "toolbar-outline", lucide.List(), "Outline", infoTabOutline, nil)
+			a.infoTabButton(c, "toolbar-outline", lucide.List(), tr("Outline"), infoTabOutline, nil)
 		}
 		if a.detailsViewEnabled("git") {
-			a.infoTabButton(c, "toolbar-git", lucide.GitBranch(), "Git", infoTabGit, nil)
+			a.infoTabButton(c, "toolbar-git", lucide.GitBranch(), tr("Git"), infoTabGit, nil)
 		}
 		if a.detailsViewEnabled("files") {
-			a.infoTabButton(c, "toolbar-files", lucide.Folder(), "Files", infoTabFiles, nil)
+			a.infoTabButton(c, "toolbar-files", lucide.Folder(), tr("Files"), infoTabFiles, nil)
 		}
 		ui.Box(c).Grow(1)
-		a.iconButton(c, "toolbar-panel", lucide.PanelRightClose(), "Toggle panel", func() {
+		a.iconButton(c, "toolbar-panel", lucide.PanelRightClose(), tr("Toggle panel"), func() {
 			a.toggleInfo()
 		})
 	})
@@ -272,7 +272,7 @@ func (a *app) chatToolbarRow(c *ui.Context) {
 	t := c.Theme()
 	ui.Row(c).FillWidth().Height(a.stripBar(c)).Padding(0, 14).Gap(8).Children(func() {
 		nutTile(c, 18)
-		ui.Text(c, "Agent").Bold()
+		ui.Text(c, tr("Agent")).Bold()
 		ui.Box(c).Grow(1)
 		cl := ui.Button(c, "×").Padding(0, 5).FocusRing(false)
 		cl.TextColor(t.TextMuted)

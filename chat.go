@@ -77,7 +77,7 @@ func (a *app) chatBody(c *ui.Context) {
 				if a.chat.busy && a.chat.thinking() {
 					ui.Box(c).Padding(8, 0).Children(func() {
 						thinking.Thinking(c, thinking.Props{
-							Label:     "Thinking",
+							Label:     tr("Thinking"),
 							ShowTimer: true,
 							Started:   a.chat.started,
 						})
@@ -94,6 +94,7 @@ func (a *app) chatBody(c *ui.Context) {
 			Model:        "demo",
 			Provider:     "built-in",
 			MessageCount: len(a.chat.msgs),
+			Placeholder:  tr("Ask me anything"),
 		})
 	})
 }
