@@ -243,6 +243,7 @@ func Default() *Settings {
 
 		OptionAsAlt:                 "false",
 		RightClickAction:            "context-menu",
+		MouseShiftToSelect:          true,
 		BypassMouseReporting:        "shift",
 		LinkClickOverMouseMode:      true,
 		CursorClickToMove:           true,
@@ -265,6 +266,7 @@ func Default() *Settings {
 		HistoryUpArrow:              "auto",
 		ScrollbackLines:             10000,
 
+		Term:                    "auto",
 		ShellIntegration:        true,
 		SSHIntegration:          true,
 		SessionRestoreProcesses: "none",
@@ -412,12 +414,8 @@ func (s *Settings) Normalize() {
 			s.FontLigatures = "off"
 		}
 	}
-	if s.OptionAsAlt == "true" || s.OptionAsAlt == "false" || s.OptionAsAlt == "" {
-		if s.OptionAsAlt == "true" {
-			s.OptionAsAlt = "true"
-		} else {
-			s.OptionAsAlt = "false"
-		}
+	if s.OptionAsAlt == "" {
+		s.OptionAsAlt = "false"
 	}
 	// The three closing settings were booleans alike: ask, or do not.
 	for _, confirm := range []*string{&s.ConfirmCloseTab, &s.ConfirmCloseWindow, &s.ConfirmClosePane} {

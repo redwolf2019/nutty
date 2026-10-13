@@ -5,7 +5,7 @@ package settings
 // even when this build does not act on them. Generated from otty's config.
 type extraDef struct {
 	key  string
-	kind string // bool | number | string | color | list
+	kind string // bool | number | string | list
 	def  any
 }
 

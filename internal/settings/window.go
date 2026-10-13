@@ -677,35 +677,5 @@ func (sw *settingsWindow) syncColors() {
 		d := *defByKey(fmt.Sprintf("palette-%d", i))
 		sync(d, func(v string) { d.set(sw.s, v) })
 	}
-	// The unmodeled color keys of the All Settings list edit through the
-	// Extra map, with the same well bookkeeping.
-	for _, x := range extraSettings {
-		if x.kind != "color" {
-			continue
-		}
-		st := sw.extraWellState("extra:" + x.key)
-		hex := extraString(sw.s, x.key)
-		def := th.Foreground
-		if !sw.wells.init {
-			if hex != "" {
-				st.color = ui.Hex(hex)
-				st.inUse = true
-			} else {
-				st.color = def
-			}
-			st.base = st.color
-			continue
-		}
-		if !st.inUse {
-			st.base, st.color = def, def
-		}
-		if st.color != st.base {
-			st.inUse = true
-			st.base = st.color
-			sw.s.Extra[x.key] = ColorHex(st.color)
-		} else if st.inUse {
-			sw.s.Extra[x.key] = ColorHex(st.color)
-		}
-	}
 	sw.wells.init = true
 }
